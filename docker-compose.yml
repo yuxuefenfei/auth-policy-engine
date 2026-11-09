@@ -1,0 +1,26 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-localrootOnly}
+      MYSQL_DATABASE: auth_engine
+      MYSQL_USER: auth
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-localDemoOnly}
+    ports:
+      - '3306:3306'
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: [ 'CMD-SHELL', 'mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD' ]
+      interval: 5s
+      retries: 15
+  redis:
+    image: redis:7.4-alpine
+    command: [ 'redis-server', '--appendonly', 'yes' ]
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+volumes:
+  mysql_data:
+  redis_data:

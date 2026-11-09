@@ -1,0 +1,21 @@
+{
+  "op": "AT_LEAST",
+  "required": 2,
+  "children": [
+    {
+      "op": "FACTOR",
+      "id": "password",
+      "factor": "PASSWORD"
+    },
+    {
+      "op": "FACTOR",
+      "id": "sms",
+      "factor": "SMS_OTP"
+    },
+    {
+      "op": "FACTOR",
+      "id": "qr",
+      "factor": "APP_QR_APPROVAL"
+    }
+  ]
+}

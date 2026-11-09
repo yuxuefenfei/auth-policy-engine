@@ -1,0 +1,35 @@
+{
+  "op": "ALL",
+  "children": [
+    {
+      "op": "SEQUENCE",
+      "children": [
+        {
+          "op": "ANY",
+          "children": [
+            {
+              "op": "FACTOR",
+              "id": "password",
+              "factor": "PASSWORD"
+            },
+            {
+              "op": "FACTOR",
+              "id": "qr",
+              "factor": "APP_QR_APPROVAL"
+            }
+          ]
+        },
+        {
+          "op": "FACTOR",
+          "id": "sms",
+          "factor": "SMS_OTP"
+        }
+      ]
+    },
+    {
+      "op": "FACTOR",
+      "id": "passkey",
+      "factor": "PASSKEY"
+    }
+  ]
+}

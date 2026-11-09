@@ -1,0 +1,20 @@
+spring:
+  datasource:
+    url: ${MYSQL_URL:jdbc:mysql://localhost:3306/auth_engine?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC}
+    username: ${MYSQL_USER:auth}
+    password: ${MYSQL_PASSWORD:?MYSQL_PASSWORD_NOT_SET}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate # 首次建表需使用迁移工具或另行初始化。不要在生产环境使用 update。
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+app:
+  auth:
+    storage: redis
+    cookie-secure: true
+    demo-sms-log-enabled: false
+    seed-demo-users: false

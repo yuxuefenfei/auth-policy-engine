@@ -1,0 +1,33 @@
+server:
+  port: 8080
+  error:
+    include-message: never
+spring:
+  application:
+    name: auth-policy-engine
+  datasource:
+    url: jdbc:h2:mem:auth_engine;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ''
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: update # 仅供示例。生产环境改为 Flyway/Liquibase
+    properties:
+      hibernate:
+        format_sql: false
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+app:
+  auth:
+    policy-code: WEB_LOGIN
+    attempt-ttl-seconds: 300
+    max-factor-failures: 5
+    max-challenge-sends: 3
+    challenge-cooldown-seconds: 30
+    cookie-secure: false # 仅本地 HTTP 运行。生产必须设为 true，并配置 HTTPS。
+    storage: memory
+    demo-sms-log-enabled: true # 仅演示：短信验证码写入服务端控制台
+    seed-demo-users: true # 仅演示：预置测试用户，生产必须关闭

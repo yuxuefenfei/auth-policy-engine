@@ -1,0 +1,20 @@
+# 本地 docker compose 演示 MySQL + Redis：不要在生产使用！
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/auth_engine?useUnicode=true&characterEncoding=utf8&serverTimezone=UTC
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: auth
+    password: localDemoOnly
+  jpa:
+    hibernate:
+      ddl-auto: update
+  data:
+    redis:
+      host: localhost
+      port: 6379
+app:
+  auth:
+    storage: redis
+    demo-sms-log-enabled: true
+    seed-demo-users: true
+    cookie-secure: false
