@@ -27,7 +27,9 @@ mvn clean test
 mvn spring-boot:run
 ```
 
-访问 `http://localhost:8080` 下的 `/api/**` 接口。项目仅有 REST API，没有前端登录页面。
+访问 `http://localhost:8080/` 即可直接打开 **全功能可视化动态认证前端验证控制台**（已内置在 `src/main/resources/static` 中，无需安装 Node.js）。
+
+同时提供独立的现代前端工程（Vue 3 + TypeScript），位于 `frontend/` 目录。
 
 本地演示账号（ **只在默认开发配置启用**）：
 
