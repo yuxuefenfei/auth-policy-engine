@@ -40,13 +40,13 @@ const attemptCountdownText = computed(() => {
 const policyDecisionExplanation = computed(() => {
   if (!currentAttempt.value) return '';
   if (currentAttempt.value.status === 'SUCCEEDED') {
-    return '🎉 策略树所有条件已完整满足，认证状态机判定为 SATISFIED。可单次调用 /complete 签发 Bearer 凭证。';
+    return '🎉 策略树所有条件已完整满足，认证状态机判定为 SATISFIED。可调用 /complete 完成会话核销并签发访问令牌。';
   }
   if (currentAttempt.value.status === 'FAILED') {
-    return '❌ 由于验证失败次数达到系统安全上限，或必要分支全灭，策略判定为 IMPOSSIBLE。';
+    return '❌ 由于验证失败次数达到安全上限或必要认证分支均已失败，策略判定为 IMPOSSIBLE。';
   }
   const avail = currentAttempt.value.available.map((a) => a.nodeId).join(', ');
-  return `根据当前 AST 拓扑规则，当前开放执行的认证因子为: [${avail || '无'}]。`;
+  return `根据当前策略拓扑规则，当前开放验证的认证方式为: [${avail || '无'}]。`;
 });
 
 async function loadActive() {
@@ -107,7 +107,7 @@ async function testReplayAttack() {
   testResults.value.replay = '发起恶意重放请求中...';
   try {
     await completeAttempt(currentAttempt.value.attemptId);
-    testResults.value.replay = '异常: 竟然重复消费成功了(未被CAS防线拦截)';
+    testResults.value.replay = '异常: 重复核销成功 (未被 CAS 防线拦截)';
   } catch (err: any) {
     testResults.value.replay = `成功拦截防重放! HTTP ${err.status}: ${err.data?.error || err.message}`;
   } finally {
@@ -371,7 +371,7 @@ onMounted(loadActive);
                 class="w-full py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-2xl shadow-xl shadow-indigo-600/25 transition-all duration-200 transform active:scale-98 disabled:opacity-50 flex items-center justify-center space-x-2 text-sm"
               >
                 <span v-if="loadingCreate" class="animate-spin">🔄</span>
-                <span>创建登录 Attempt 流程 ↵</span>
+                <span>发起登录认证流程 (Start Login) ↵</span>
               </button>
             </form>
           </div>
@@ -407,7 +407,7 @@ onMounted(loadActive);
                   </span>
                 </div>
                 <div class="flex justify-between items-center">
-                  <span class="text-slate-500">状态机状态:</span>
+                  <span class="text-slate-500">流程会话状态:</span>
                   <span
                     class="font-bold px-2 py-0.5 rounded text-[11px] border"
                     :class="[
@@ -426,19 +426,19 @@ onMounted(loadActive);
                   <span class="text-indigo-300 font-semibold">{{ attemptCountdownText }}</span>
                 </div>
                 <div class="flex justify-between items-center">
-                  <span class="text-slate-500">条件满足判断:</span>
+                  <span class="text-slate-500">策略达成判定:</span>
                   <span
                     class="font-bold"
                     :class="currentAttempt.canComplete ? 'text-emerald-400' : 'text-slate-500'"
                   >
-                    {{ currentAttempt.canComplete ? '✅ SATISFIED (可完成)' : '⏳ PENDING (仍需满足)' }}
+                    {{ currentAttempt.canComplete ? '✅ SATISFIED (条件已达成)' : '⏳ PENDING (等待达成)' }}
                   </span>
                 </div>
               </div>
 
               <!-- 拓扑执行树 -->
               <div class="space-y-3">
-                <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">执行拓扑分支</h4>
+                <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">策略判定拓扑</h4>
                 <div class="p-4 bg-slate-900/60 rounded-2xl border border-slate-800">
                   <PolicyNodeViewer
                     :node="currentAttemptAst"
@@ -465,9 +465,9 @@ onMounted(loadActive);
               <div class="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div>
                   <h3 class="text-base font-bold text-white flex items-center space-x-2">
-                    <span>认证因子执行区</span>
+                    <span>多因子核验操作区</span>
                     <span class="text-xs font-normal text-slate-400">
-                      (开放因子: {{ currentAttempt.available.map((a) => a.nodeId).join(', ') || '无' }})
+                      (当前待核验项: {{ currentAttempt.available.map((a) => a.nodeId).join(', ') || '无' }})
                     </span>
                   </h3>
                 </div>
@@ -491,7 +491,7 @@ onMounted(loadActive);
                 </div>
                 <h4 class="text-base font-bold text-emerald-200">策略树所有条件已达成！</h4>
                 <p class="text-xs text-emerald-300/80 max-w-md mx-auto">
-                  策略求值引擎判定通过。点击下方按钮原子消费 Attempt，签发 Bearer 令牌。
+                  策略求值判定通过。点击下方按钮完成会话核销，签发访问令牌 (Bearer Token)。
                 </p>
                 <button
                   @click="handleCompleteLogin"
@@ -499,7 +499,7 @@ onMounted(loadActive);
                   class="px-8 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold rounded-2xl shadow-xl shadow-emerald-500/20 transition transform active:scale-98 disabled:opacity-50 inline-flex items-center space-x-2 text-sm"
                 >
                   <span v-if="loadingComplete" class="animate-spin">🔄</span>
-                  <span>🚀 完成登录并签发会话令牌 (Complete)</span>
+                  <span>🚀 完成认证并签发访问令牌 (Complete)</span>
                 </button>
               </div>
 
@@ -546,7 +546,7 @@ onMounted(loadActive);
                   <span class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
                     🛡️
                   </span>
-                  <h3 class="text-base font-bold text-white">会话签发与安全攻防实验室</h3>
+                  <h3 class="text-base font-bold text-white">会话授权与安全边界测试 (Security Lab)</h3>
                 </div>
                 <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30">
                   AUTHENTICATED
@@ -575,7 +575,7 @@ onMounted(loadActive);
 
               <!-- 安全攻防边界实测卡片 -->
               <div class="space-y-3">
-                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">安全边界攻防实测 (Security Edge Cases):</h4>
+                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">安全防护边界测试 (Security Edge Cases):</h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   
                   <!-- 测试防重放 -->
@@ -584,14 +584,14 @@ onMounted(loadActive);
                       <span>🧪 测试防重放攻击 (Replay Attack)</span>
                     </span>
                     <p class="text-slate-400 text-[11px] leading-snug">
-                      尝试再次向 /complete 发起消费请求。预期触发 CAS 原子排他锁，返回 403 Forbidden。
+                      模拟再次向 /complete 发起会话核销请求，验证 CAS 乐观锁防重放拦截（预期返回 403）。
                     </p>
                     <button
                       @click="testReplayAttack"
                       :disabled="loadingReplay"
                       class="w-full py-2 bg-rose-600/80 hover:bg-rose-600 text-white rounded-xl font-semibold transition disabled:opacity-50"
                     >
-                      再次提交消费 Attempt
+                      模拟重放提交核销
                     </button>
                     <p v-if="testResults.replay" class="font-mono text-[11px] p-2 bg-slate-950 rounded-lg border border-rose-900/40 text-rose-300">
                       {{ testResults.replay }}
@@ -604,14 +604,14 @@ onMounted(loadActive);
                       <span>🧪 测试伪造 Cookie 绑定</span>
                     </span>
                     <p class="text-slate-400 text-[11px] leading-snug">
-                      伪造无效的 AUTH_BIND 凭证发起查询。预期触发跨浏览器绑定防御，返回 403 Forbidden。
+                      伪造无效的 AUTH_BIND Cookie 发起请求，验证会话设备绑定防御（预期返回 403）。
                     </p>
                     <button
                       @click="testTamperedCookie"
                       :disabled="loadingCookie"
                       class="w-full py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl font-semibold transition disabled:opacity-50"
                     >
-                      伪造绑定凭据请求
+                      模拟伪造 Cookie 请求
                     </button>
                     <p v-if="testResults.cookie" class="font-mono text-[11px] p-2 bg-slate-950 rounded-lg border border-indigo-900/40 text-indigo-300">
                       {{ testResults.cookie }}
@@ -626,7 +626,7 @@ onMounted(loadActive);
                   @click="resetAttempt"
                   class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition"
                 >
-                  重置流程 / 测试下一轮
+                  重置会话 / 开始新测试
                 </button>
               </div>
             </div>

@@ -151,7 +151,7 @@ onUnmounted(() => {
     <!-- 状态：不可用 -->
     <div v-else-if="!isAvailable" class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-400 flex items-center space-x-2">
       <span>🔒</span>
-      <span>当前因子不可执行（需满足前序条件或已被短路跳过）。</span>
+      <span>当前认证方式暂不可用（需满足前置条件或已被短路通过）。</span>
     </div>
 
     <!-- 状态：未生成二维码 -->
@@ -159,9 +159,9 @@ onUnmounted(() => {
       <div class="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-xl mx-auto mb-3 shadow-inner">
         📷
       </div>
-      <h5 class="text-xs font-semibold text-slate-200">未就绪的扫码挑战</h5>
+      <h5 class="text-xs font-semibold text-slate-200">待获取登录二维码</h5>
       <p class="text-[11px] text-slate-500 mt-1 max-w-sm mx-auto">
-        点击下方按钮将由服务端生成带有唯一防篡改哈希的一次性二维码 Ticket。
+        点击下方按钮生成具有时效防护的一次性扫码登录二维码。
       </p>
       <button
         type="button"
@@ -170,7 +170,7 @@ onUnmounted(() => {
         class="mt-4 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold rounded-xl text-xs transition shadow-lg shadow-purple-600/20 disabled:opacity-50 inline-flex items-center space-x-2"
       >
         <span v-if="loadingStart" class="animate-spin">🔄</span>
-        <span>生成动态登录二维码 (Start Challenge)</span>
+        <span>生成动态登录二维码 (获取凭据)</span>
       </button>
     </div>
 
@@ -196,14 +196,14 @@ onUnmounted(() => {
           </div>
 
           <div>
-            <span class="text-slate-400 block text-[11px]">一次性 Ticket:</span>
+            <span class="text-slate-400 block text-[11px]">一次性授权凭据 (Ticket):</span>
             <code class="block mt-0.5 p-2 bg-slate-900 border border-slate-800 rounded-lg font-mono text-[11px] text-purple-300 break-all select-all">
               {{ qrTicket }}
             </code>
           </div>
 
           <div class="flex items-center justify-between text-slate-400 text-[11px]">
-            <span>时效截至: <strong class="text-slate-200 font-mono">{{ expiresAtText }}</strong></span>
+            <span>有效期至: <strong class="text-slate-200 font-mono">{{ expiresAtText }}</strong></span>
             <button
               type="button"
               @click="handleStart"
@@ -222,7 +222,7 @@ onUnmounted(() => {
               class="flex-1 py-2 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl font-semibold transition text-xs shadow-md shadow-purple-600/20 disabled:opacity-50 flex items-center justify-center space-x-1.5"
             >
               <span v-if="loadingApprove" class="animate-spin">🔄</span>
-              <span>📱 一键作为 {{ username }} 模拟扫码确认</span>
+              <span>📱 一键作为 {{ username }} 模拟扫码授权</span>
             </button>
           </div>
         </div>

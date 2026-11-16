@@ -11,28 +11,28 @@ const props = defineProps<{
 function factorDetails(factor?: string) {
   switch (factor) {
     case 'PASSWORD':
-      return { name: '密码凭证 (BCrypt)', icon: '🔑', color: 'indigo', desc: '口令凭证哈希单向校验' };
+      return { name: '密码认证 (BCrypt)', icon: '🔑', color: 'indigo', desc: '密码单向哈希安全核验' };
     case 'SMS_OTP':
-      return { name: '短信验证码 (OTP)', icon: '💬', color: 'amber', desc: '带时效一次性动态校验码' };
+      return { name: '短信验证码 (OTP)', icon: '💬', color: 'amber', desc: '时效性一次性动态短信码' };
     case 'APP_QR_APPROVAL':
-      return { name: 'APP 扫码授权 (QR)', icon: '📲', color: 'purple', desc: '独立移动端凭证反向授权' };
+      return { name: 'APP 扫码授权 (QR)', icon: '📲', color: 'purple', desc: '移动端安全令扫码授权' };
     case 'PASSKEY':
-      return { name: '生物密钥 (Passkey)', icon: '🛡️', color: 'rose', desc: 'WebAuthn 硬件公钥认证' };
+      return { name: '通行密钥 (Passkey)', icon: '🛡️', color: 'rose', desc: 'WebAuthn 生物特征与硬件公钥' };
     default:
-      return { name: '未知因子', icon: '⚙️', color: 'slate', desc: '自定义扩展认证因子' };
+      return { name: '扩展认证方式', icon: '⚙️', color: 'slate', desc: '自定义扩展认证项' };
   }
 }
 
 function opDetails(op: string) {
   switch (op) {
     case 'ALL':
-      return { label: 'ALL 逻辑全与', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30', desc: '必须满足全部子条件' };
+      return { label: 'ALL 全部满足 (全与)', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30', desc: '必须满足全部子条件' };
     case 'ANY':
-      return { label: 'ANY 逻辑或 (短路)', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30', desc: '任意子节点达成即可满足' };
+      return { label: 'ANY 任选其一 (短路)', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30', desc: '任意一项达成即可快速通过' };
     case 'AT_LEAST':
-      return { label: 'AT_LEAST 多数派', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30', desc: `必须至少满足 ${props.node?.required || 2} 项独立因子` };
+      return { label: 'AT_LEAST 阈值要求', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30', desc: `至少满足其中 ${props.node?.required || 2} 项认证` };
     case 'SEQUENCE':
-      return { label: 'SEQUENCE 顺序流转', color: 'bg-amber-500/10 text-amber-400 border-amber-500/30', desc: '按严格顺序依次推进解锁' };
+      return { label: 'SEQUENCE 顺序认证', color: 'bg-amber-500/10 text-amber-400 border-amber-500/30', desc: '必须按固定前后顺序依次完成' };
     default:
       return { label: op, color: 'bg-slate-500/10 text-slate-400 border-slate-500/30', desc: '' };
   }
@@ -47,15 +47,15 @@ function statusBadge(status?: StepProgress, available?: boolean) {
     return { text: '已验证 VERIFIED', class: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 ring-1 ring-emerald-500/20' };
   }
   if (status === 'CHALLENGE_ISSUED') {
-    return { text: '挑战就绪 CHALLENGED', class: 'bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse' };
+    return { text: '待核验 CHALLENGED', class: 'bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse' };
   }
   if (status === 'EXHAUSTED') {
-    return { text: '锁定 EXHAUSTED', class: 'bg-rose-500/20 text-rose-400 border-rose-500/30' };
+    return { text: '次数超限 EXHAUSTED', class: 'bg-rose-500/20 text-rose-400 border-rose-500/30' };
   }
   if (available) {
-    return { text: '可执行 READY', class: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40 ring-1 ring-indigo-500/30' };
+    return { text: '待验证 READY', class: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40 ring-1 ring-indigo-500/30' };
   }
-  return { text: '等待中 PENDING', class: 'bg-slate-800 text-slate-400 border-slate-700' };
+  return { text: '等待前置 PENDING', class: 'bg-slate-800 text-slate-400 border-slate-700' };
 }
 </script>
 

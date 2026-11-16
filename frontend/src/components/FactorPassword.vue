@@ -27,7 +27,7 @@ async function handleVerify() {
     const res = await verifyFactor(props.attempt.attemptId, props.nodeId, password.value);
     emit('updated', res.attempt);
     if (!res.verified) {
-      errorMessage.value = '密码校验失败，BCrypt 哈希不匹配，请核对用户凭证。';
+      errorMessage.value = '密码错误，请核对登录密码。';
     }
   } catch (err: any) {
     errorMessage.value = err.data?.error || err.message || '网络或服务端异常';
@@ -59,7 +59,7 @@ async function handleVerify() {
         </div>
         <div>
           <h4 class="text-sm font-bold text-slate-100 flex items-center space-x-2">
-            <span>密码凭证因子 (PASSWORD)</span>
+            <span>密码身份认证 (PASSWORD)</span>
             <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">BCrypt</span>
           </h4>
           <span class="text-xs text-slate-400 font-mono">节点 ID: {{ nodeId }}</span>
@@ -84,21 +84,21 @@ async function handleVerify() {
     <div v-if="progress === 'VERIFIED'" class="p-3.5 bg-emerald-950/30 rounded-xl border border-emerald-500/30 flex items-center space-x-3 text-xs text-emerald-300">
       <span class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-400">✓</span>
       <div>
-        <p class="font-semibold">口令凭据比对成功</p>
-        <p class="text-[11px] text-emerald-400/80">已通过 BCrypt.checkpw 校验，当前因子状态已原子提交至 CAS 状态机。</p>
+        <p class="font-semibold">密码凭证校验通过</p>
+        <p class="text-[11px] text-emerald-400/80">已通过 BCrypt 安全校验，当前认证状态已同步至状态机。</p>
       </div>
     </div>
 
     <!-- 状态：不可用 -->
     <div v-else-if="!isAvailable" class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-400 flex items-center space-x-2">
       <span>🔒</span>
-      <span>当前步骤不可执行（需满足前置步骤，或已被短路分支忽略）。</span>
+      <span>当前认证暂不可用（需满足前置条件或已被短路分支忽略）。</span>
     </div>
 
     <!-- 状态：可输入验证 -->
     <form v-else @submit.prevent="handleVerify" class="space-y-4">
       <div>
-        <label class="block text-xs font-medium text-slate-300 mb-1.5">输入口令密码</label>
+        <label class="block text-xs font-medium text-slate-300 mb-1.5">输入登录密码</label>
         <div class="relative">
           <input
             v-model="password"
@@ -152,7 +152,7 @@ async function handleVerify() {
         class="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white font-semibold rounded-xl text-sm transition shadow-lg shadow-indigo-600/20 disabled:opacity-50 flex items-center justify-center space-x-2"
       >
         <span v-if="loading" class="animate-spin">🔄</span>
-        <span>验证密码凭证</span>
+        <span>提交密码验证</span>
       </button>
     </form>
   </div>

@@ -19,7 +19,7 @@ function clearLogs() {
     <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
       <div>
         <h3 class="text-sm font-bold text-slate-100 flex items-center space-x-2">
-          <span>📡 API 交互与 CAS 状态转移审计追踪器</span>
+          <span>📡 API 交互与 CAS 状态转移审计日志</span>
           <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono">
             {{ filteredLogs.length }} 笔记录
           </span>
@@ -40,7 +40,7 @@ function clearLogs() {
           @click="clearLogs"
           class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl transition font-medium"
         >
-          清空追踪日志
+          清空审计日志
         </button>
       </div>
     </div>

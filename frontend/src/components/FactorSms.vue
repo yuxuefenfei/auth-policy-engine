@@ -135,19 +135,19 @@ onUnmounted(() => {
       <span class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-400">✓</span>
       <div>
         <p class="font-semibold">短信动态验证码已成功核验</p>
-        <p class="text-[11px] text-emerald-400/80">一次性动态口令匹配成功，挑战哈希已在服务端原子销毁。</p>
+        <p class="text-[11px] text-emerald-400/80">一次性动态码比对通过，核验凭据已在服务端安全注销。</p>
       </div>
     </div>
 
     <!-- 状态：不可用 -->
     <div v-else-if="!isAvailable" class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-400 flex items-center space-x-2">
       <span>🔒</span>
-      <span>当前因子不可执行（需满足前序条件或已被跳过）。</span>
+      <span>当前验证方式暂不可用（需满足前置认证条件或已被短路跳过）。</span>
     </div>
 
-    <!-- 状态：可发送挑战与校验 -->
+    <!-- 状态：可发送验证码与核验 -->
     <div v-else class="space-y-4">
-      <!-- 触发挑战发送 -->
+      <!-- 触发验证码发送 -->
       <div class="flex items-center space-x-3">
         <button
           type="button"
@@ -156,14 +156,14 @@ onUnmounted(() => {
           class="flex-1 py-2.5 px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-white font-semibold rounded-xl text-xs transition shadow-lg shadow-amber-600/20 disabled:opacity-50 flex items-center justify-center space-x-2"
         >
           <span v-if="loadingStart" class="animate-spin">🔄</span>
-          <span>{{ cooldown > 0 ? `⏳ ${cooldown}s 后可重新获取` : '📡 发起短信挑战 (Start Challenge)' }}</span>
+          <span>{{ cooldown > 0 ? `⏳ ${cooldown}s 后可重新获取` : '📡 发送短信验证码 (获取口令)' }}</span>
         </button>
         <button
           type="button"
           @click="fetchConsoleCode"
           class="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl text-xs font-mono transition flex items-center space-x-1"
         >
-          <span>⚡ 探测控制台</span>
+          <span>⚡ 读取控制台验证码</span>
         </button>
       </div>
 

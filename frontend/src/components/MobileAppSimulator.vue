@@ -21,15 +21,15 @@ async function handleApprove() {
     const res = await approveQr(ticket.value.trim(), appUser.value, pwd);
     result.value = {
       success: true,
-      title: '✅ 扫码反向授权成功',
-      message: `APP 端当前用户 (${appUser.value}) 已经完成授权。服务端 CAS 状态机已更新为 VERIFIED。`,
+      title: '✅ 扫码授权确认成功',
+      message: `移动端用户 (${appUser.value}) 已确认授权，服务端状态已更新为 VERIFIED。`,
     };
     emit('approved', res);
   } catch (err: any) {
     result.value = {
       success: false,
-      title: `❌ 授权被拒绝 (HTTP ${err.status})`,
-      message: err.data?.error || err.message || '扫码账号校验失败',
+      title: `❌ 授权未通过 (HTTP ${err.status})`,
+      message: err.data?.error || err.message || '扫码账号核验失败',
     };
   } finally {
     loading.value = false;
@@ -107,7 +107,7 @@ async function handleApprove() {
 
         <!-- 扫描 Ticket 输入区 -->
         <div class="space-y-2">
-          <label class="block text-xs font-medium text-slate-300">已捕获的 Ticket 密文</label>
+          <label class="block text-xs font-medium text-slate-300">已捕获的扫码票据凭据 (Ticket)</label>
           <textarea
             v-model="ticket"
             rows="3"
@@ -146,9 +146,9 @@ async function handleApprove() {
         </div>
 
         <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
-          <p class="font-semibold text-slate-300">🧪 安全隔离防御测试：</p>
+          <p class="font-semibold text-slate-300">🧪 跨账号隔离防护验证：</p>
           <p>
-            若网页登录 Attempt 用户为 alice，但 APP 模拟器切换为 admin 并点击授权，后端会强制拦截并返回 403 Forbidden（扫码账号与登录账号不一致）。
+            若当前登录账号为 alice，但移动端使用 admin 身份进行扫码授权，后端将触发身份校验拦截并返回 403 Forbidden（扫码人与登录人身份不符）。
           </p>
         </div>
 

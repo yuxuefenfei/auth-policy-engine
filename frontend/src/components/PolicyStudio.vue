@@ -33,9 +33,9 @@ const policyTemplates = [
     },
   },
   {
-    name: '纯口令密码策略',
+    name: '单密码认证策略',
     badge: 'FACTOR',
-    level: '⚡ Level 1 弱认证',
+    level: '⚡ Level 1 基础认证',
     desc: '极简模式：只需验证一次正确密码即完成整个流程',
     summary: 'FACTOR(password)',
     negative: false,
@@ -76,10 +76,10 @@ const policyTemplates = [
     },
   },
   {
-    name: '三选二多数派投票 (Quorum)',
+    name: '三选二阈值认证 (Quorum)',
     badge: 'AT_LEAST 2',
-    level: '🏛️ MFA 投票制',
-    desc: '密码、短信、APP扫码中，任意验证通过 2 项即可',
+    level: '🏛️ 阈值条件 (MFA)',
+    desc: '密码、短信、APP扫码中，任意完成两项即可通过',
     summary: 'AT_LEAST(2, [pwd, sms, qr])',
     negative: false,
     json: {
@@ -95,8 +95,8 @@ const policyTemplates = [
   {
     name: '顺序流转认证 (Sequence)',
     badge: 'SEQUENCE',
-    level: '⏳ 严格漏斗',
-    desc: '必须先完成步骤一密码校验，方开放步骤二短信验证',
+    level: '⏳ 严格按序',
+    desc: '必须先完成第一步密码验证，才开放第二步短信验证',
     summary: 'SEQUENCE(password -> sms)',
     negative: false,
     json: {
@@ -299,7 +299,7 @@ onMounted(loadData);
               <span>AST 策略 JSON 编辑器</span>
               <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">AST White-list</span>
             </h3>
-            <p class="text-xs text-slate-400">仅支持已知操作符与因子，禁止任意动态表达式执行</p>
+            <p class="text-xs text-slate-400">仅支持白名单操作符与认证方式，禁止执行任意动态表达式</p>
           </div>
           <button
             @click="formatJson"
