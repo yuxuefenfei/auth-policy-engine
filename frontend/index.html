@@ -2,9 +2,17 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Auth Policy Engine - 动态认证策略引擎</title>
+    <!-- 全局样式与备用 Tailwind 样式支持 -->
+    <link rel="stylesheet" href="/css/tailwind.min.css" />
+    <script src="/js/qrcode.min.js"></script>
+    <style>
+      [v-cloak] { display: none !important; }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      }
+    </style>
   </head>
   <body class="bg-gray-50 text-gray-800 min-h-screen">
     <div id="app"></div>

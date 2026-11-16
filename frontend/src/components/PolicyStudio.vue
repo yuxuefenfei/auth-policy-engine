@@ -12,10 +12,12 @@ const loadingPublish = ref(false);
 
 const policyTemplates = [
   {
-    name: '默认策略 (Default)',
+    name: '金融级组合认证 (Default)',
     badge: 'ALL + ANY',
-    desc: '密码/扫码二选一，另外必须短信动态验证码',
-    summary: 'ALL(ANY(pwd, qr), sms)',
+    level: '🛡️ Level 3 双因子',
+    desc: '密码或APP扫码二选一，另外必须短信动态码校验',
+    summary: 'ALL(ANY(password, qr), sms)',
+    negative: false,
     json: {
       op: 'ALL',
       children: [
@@ -31,10 +33,12 @@ const policyTemplates = [
     },
   },
   {
-    name: '纯密码策略 (Single Factor)',
+    name: '纯口令密码策略',
     badge: 'FACTOR',
-    desc: '最精简策略：只需验证一次正确密码即完成',
+    level: '⚡ Level 1 弱认证',
+    desc: '极简模式：只需验证一次正确密码即完成整个流程',
     summary: 'FACTOR(password)',
+    negative: false,
     json: {
       op: 'FACTOR',
       id: 'password',
@@ -44,8 +48,10 @@ const policyTemplates = [
   {
     name: '双因子强认证 (Strict 2FA)',
     badge: 'ALL',
-    desc: '必须同时验证密码及短信动态验证码',
+    level: '🔒 Level 2 强双因子',
+    desc: '严格必须同时校验密码与手机短信动态验证码',
     summary: 'ALL(password, sms)',
+    negative: false,
     json: {
       op: 'ALL',
       children: [
@@ -57,8 +63,10 @@ const policyTemplates = [
   {
     name: '二选一认证 (Either/Or)',
     badge: 'ANY',
-    desc: '密码或者短信任意验证一个即可登录',
+    level: '🔄 灵活降级',
+    desc: '用户在密码或短信中任意完成一个即可通行',
     summary: 'ANY(password, sms)',
+    negative: false,
     json: {
       op: 'ANY',
       children: [
@@ -68,10 +76,12 @@ const policyTemplates = [
     },
   },
   {
-    name: '三选二多因子投票 (Quorum)',
+    name: '三选二多数派投票 (Quorum)',
     badge: 'AT_LEAST 2',
-    desc: '密码、短信、扫码三种因子中，任意完成两项即可',
+    level: '🏛️ MFA 投票制',
+    desc: '密码、短信、APP扫码中，任意验证通过 2 项即可',
     summary: 'AT_LEAST(2, [pwd, sms, qr])',
+    negative: false,
     json: {
       op: 'AT_LEAST',
       required: 2,
@@ -83,10 +93,12 @@ const policyTemplates = [
     },
   },
   {
-    name: '顺序流转策略 (Sequence)',
+    name: '顺序流转认证 (Sequence)',
     badge: 'SEQUENCE',
-    desc: '严格按步骤流转：第1步验证密码，通过后才开放第2步短信',
+    level: '⏳ 严格漏斗',
+    desc: '必须先完成步骤一密码校验，方开放步骤二短信验证',
     summary: 'SEQUENCE(password -> sms)',
+    negative: false,
     json: {
       op: 'SEQUENCE',
       children: [
@@ -96,10 +108,12 @@ const policyTemplates = [
     },
   },
   {
-    name: '非法 Passkey 拦截测试',
+    name: '未支持因子拦截测试',
     badge: '拒绝测试 ❌',
-    desc: '策略包含服务端尚未实现的 PASSKEY 认证器，验证发布拦截',
+    level: '🛑 静态校验',
+    desc: '策略包含未实现认证器 PASSKEY，验证发布强拦截',
     summary: 'ALL(password, PASSKEY)',
+    negative: true,
     json: {
       op: 'ALL',
       children: [
@@ -109,10 +123,12 @@ const policyTemplates = [
     },
   },
   {
-    name: '重复因子拦截测试',
+    name: '同类因子重复计数拦截',
     badge: '拒绝测试 ❌',
+    level: '🛑 因子去重',
     desc: '策略重复使用相同 FactorType，验证防重复多因子校验',
     summary: 'ALL(pwd1, pwd2)',
+    negative: true,
     json: {
       op: 'ALL',
       children: [
@@ -150,6 +166,12 @@ function formatJson() {
   } catch (err: any) {
     policyEditError.value = 'JSON 语法错误: ' + err.message;
   }
+}
+
+function formatDate(d: any) {
+  if (!d) return '系统初始化';
+  const parsed = new Date(d);
+  return isNaN(parsed.getTime()) ? '系统初始化' : parsed.toLocaleString();
 }
 
 async function handleSaveDraft() {
@@ -199,132 +221,175 @@ onMounted(loadData);
 
 <template>
   <div class="space-y-6">
-    <!-- 管理状态条 -->
-    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 flex flex-wrap items-center justify-between gap-4">
+    <!-- 管理状态顶栏 -->
+    <div class="glass-panel rounded-2xl p-6 border border-slate-800 flex flex-wrap items-center justify-between gap-4 shadow-xl">
       <div>
-        <h2 class="text-base font-bold text-gray-900">策略编排与版本热更控制台</h2>
-        <p class="text-xs text-gray-500">接口受 Spring Security Basic Auth 保护 (/api/admin/**)，需要 ROLE_ADMIN 权限</p>
+        <h2 class="text-base font-bold text-slate-100 flex items-center space-x-2">
+          <span>⚙️ 策略编排与版本热更控制台 (Policy Studio)</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono border border-indigo-500/30">
+            ROLE_ADMIN
+          </span>
+        </h2>
+        <p class="text-xs text-slate-400 mt-1">
+          管理接口受 Spring Security Basic Auth 保护 (<code>/api/admin/**</code>)，支持运行时热更新策略树并保持快照隔离
+        </p>
       </div>
       <div class="flex items-center space-x-3 text-xs">
-        <span class="text-gray-500">当前管理凭证:</span>
-        <code class="bg-gray-100 px-2 py-1 rounded font-mono text-gray-700">admin:Admin@123456</code>
-        <button @click="loadData" class="px-3 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg font-semibold transition">
-          🔄 刷新策略
+        <span class="text-slate-400">凭证:</span>
+        <code class="bg-slate-900 border border-slate-800 px-2 py-1 rounded-lg font-mono text-indigo-300">admin:Admin@123456</code>
+        <button
+          @click="loadData"
+          class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl font-medium transition flex items-center space-x-1"
+        >
+          <span>🔄 刷新策略数据</span>
         </button>
       </div>
     </div>
 
-    <!-- 预置策略模板库 -->
-    <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-200 space-y-3">
-      <h3 class="text-sm font-bold text-gray-900 flex items-center space-x-2">
-        <span>📚 预置策略 AST 模板库</span>
-        <span class="text-xs font-normal text-gray-500">(点击任意模板快速填入编辑器并一键发布)</span>
-      </h3>
+    <!-- 预置策略模板库 (8 种场景) -->
+    <div class="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4 shadow-xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-slate-100 flex items-center space-x-2">
+            <span>📚 预置策略 AST 模板库</span>
+            <span class="text-[11px] text-slate-400 font-normal">点击任意模板快速填入编辑器并一键发布测试</span>
+          </h3>
+        </div>
+      </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
         <div
           v-for="tpl in policyTemplates"
           :key="tpl.name"
           @click="selectTemplate(tpl)"
-          class="p-3 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50/50 cursor-pointer transition flex flex-col justify-between space-y-2"
+          class="p-4 rounded-xl border transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-3 group"
+          :class="[
+            tpl.negative
+              ? 'bg-rose-950/20 border-rose-900/40 hover:border-rose-500/60 hover:bg-rose-950/40'
+              : 'bg-slate-900/60 border-slate-800 hover:border-indigo-500/60 hover:bg-slate-900/90'
+          ]"
         >
-          <div>
+          <div class="space-y-1.5">
             <div class="flex items-center justify-between">
-              <span class="font-bold text-gray-900">{{ tpl.name }}</span>
-              <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">
+              <span class="font-bold text-slate-200 group-hover:text-indigo-300 transition-colors">{{ tpl.name }}</span>
+              <span
+                class="px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold"
+                :class="tpl.negative ? 'bg-rose-500/20 text-rose-300' : 'bg-indigo-500/20 text-indigo-300'"
+              >
                 {{ tpl.badge }}
               </span>
             </div>
-            <p class="text-gray-500 text-[11px] mt-1">{{ tpl.desc }}</p>
+            <div class="text-[10px] text-slate-400 font-mono">{{ tpl.level }}</div>
+            <p class="text-[11px] text-slate-400 leading-snug">{{ tpl.desc }}</p>
           </div>
-          <code class="bg-gray-50 p-1.5 rounded font-mono text-[10px] text-gray-600 truncate block">{{ tpl.summary }}</code>
+          <code class="p-1.5 rounded bg-slate-950/80 border border-slate-800/80 font-mono text-[10px] text-slate-400 truncate block">
+            {{ tpl.summary }}
+          </code>
         </div>
       </div>
     </div>
 
-    <!-- 编辑器与历史版本 -->
+    <!-- 编辑器与历史版本双栏 -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- 左栏：编辑器 -->
-      <div class="lg:col-span-7 bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+      <!-- 左栏：JSON AST 编辑器 (7 列) -->
+      <div class="lg:col-span-7 glass-panel rounded-2xl p-6 border border-slate-800 space-y-4 shadow-xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
           <div>
-            <h3 class="text-sm font-bold text-gray-900">AST 策略 JSON 编辑器</h3>
-            <p class="text-xs text-gray-500">支持 FACTOR / ALL / ANY / AT_LEAST / SEQUENCE 操作符</p>
+            <h3 class="text-sm font-bold text-slate-100 flex items-center space-x-2">
+              <span>AST 策略 JSON 编辑器</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">AST White-list</span>
+            </h3>
+            <p class="text-xs text-slate-400">仅支持已知操作符与因子，禁止任意动态表达式执行</p>
           </div>
-          <button @click="formatJson" class="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs">
-            格式化 JSON
+          <button
+            @click="formatJson"
+            class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-mono transition"
+          >
+            { } 格式化 JSON
           </button>
         </div>
 
-        <textarea
-          v-model="policyEditorText"
-          rows="15"
-          class="w-full p-3 font-mono text-xs bg-gray-900 text-green-400 rounded-xl border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        ></textarea>
+        <div class="relative rounded-xl overflow-hidden border border-slate-800 bg-slate-950">
+          <textarea
+            v-model="policyEditorText"
+            rows="16"
+            class="w-full p-4 font-mono text-xs bg-slate-950 text-emerald-400 focus:outline-none focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
+          ></textarea>
+        </div>
 
-        <div v-if="policyEditError" class="p-2.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
-          ⚠️ {{ policyEditError }}
+        <div v-if="policyEditError" class="p-3 bg-rose-950/30 border border-rose-500/40 rounded-xl text-xs text-rose-300 flex items-center space-x-2">
+          <span>⚠️</span>
+          <span>{{ policyEditError }}</span>
         </div>
 
         <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-          <div class="text-xs text-gray-500">
-            当前生效: <span class="font-bold text-gray-800">Version {{ activePolicy?.version }}</span>
+          <div class="text-xs text-slate-400">
+            生效版本: <strong class="text-indigo-400 font-mono">Version {{ activePolicy?.version }}</strong>
           </div>
           <div class="flex space-x-2">
             <button
               @click="handleSaveDraft"
               :disabled="loadingDraft"
-              class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl text-xs font-semibold transition"
+              class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold transition disabled:opacity-50 flex items-center space-x-1"
             >
-              <span v-if="loadingDraft" class="animate-spin mr-1">🔄</span>
-              <span>保存为新版本草稿 (Draft)</span>
+              <span v-if="loadingDraft" class="animate-spin">🔄</span>
+              <span>保存为草稿 (Draft)</span>
             </button>
             <button
               @click="handleSaveAndPublish"
               :disabled="loadingPublish"
-              class="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition"
+              class="px-4 py-2 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-600 text-white rounded-xl text-xs font-semibold shadow-lg shadow-indigo-600/20 transition disabled:opacity-50 flex items-center space-x-1"
             >
-              <span v-if="loadingPublish" class="animate-spin mr-1">🔄</span>
+              <span v-if="loadingPublish" class="animate-spin">🔄</span>
               <span>保存并立即发布 (Publish)</span>
             </button>
           </div>
         </div>
       </div>
 
-      <!-- 右栏：版本历史与回退 -->
-      <div class="lg:col-span-5 bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-gray-100">
-          <h3 class="text-sm font-bold text-gray-900">版本历史记录</h3>
-          <button @click="loadData" class="text-xs text-blue-600 hover:underline">刷新列表</button>
+      <!-- 右栏：版本历史与回滚 (5 列) -->
+      <div class="lg:col-span-5 glass-panel rounded-2xl p-6 border border-slate-800 space-y-4 shadow-xl">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+          <h3 class="text-sm font-bold text-slate-100">策略版本历史记录</h3>
+          <span class="text-xs text-slate-400">共 {{ policyVersions.length }} 个版本</span>
         </div>
 
-        <div class="space-y-3 max-h-[460px] overflow-y-auto pr-1">
+        <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
           <div
             v-for="ver in policyVersions"
             :key="ver.version"
-            class="p-3 rounded-xl border transition"
-            :class="ver.active ? 'bg-blue-50/70 border-blue-300' : 'bg-gray-50 border-gray-200'"
+            class="p-4 rounded-xl border transition-all duration-200 space-y-2"
+            :class="[
+              ver.active
+                ? 'bg-indigo-950/30 border-indigo-500/50 shadow-md shadow-indigo-500/10 ring-1 ring-indigo-500/20'
+                : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+            ]"
           >
-            <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center justify-between">
               <div class="flex items-center space-x-2">
-                <span class="font-bold text-sm text-gray-900">v{{ ver.version }}</span>
-                <span v-if="ver.active" class="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                  当前生效 (ACTIVE)
+                <span class="font-bold text-sm text-slate-100 font-mono">v{{ ver.version }}</span>
+                <span
+                  v-if="ver.active"
+                  class="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold px-2 py-0.5 rounded-full font-mono"
+                >
+                  ● 当前生效 (ACTIVE)
                 </span>
               </div>
               <button
                 v-if="!ver.active"
                 @click="handlePublishVersion(ver.version)"
                 :disabled="loadingPublish"
-                class="px-2.5 py-1 bg-white hover:bg-gray-100 border text-blue-700 rounded text-xs font-semibold shadow-sm transition"
+                class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-indigo-300 rounded-lg text-xs font-semibold transition"
               >
-                发布此版本
+                回退至此版本 ↺
               </button>
             </div>
-            <div class="text-[11px] text-gray-500 mb-1">
-              创建时间: {{ new Date(ver.createdAt).toLocaleString() }}
+
+            <div class="text-[11px] text-slate-400 font-mono">
+              发布时间: {{ formatDate(ver.createdAt) }}
             </div>
-            <pre class="bg-white p-2 rounded border font-mono text-[10px] text-gray-700 max-h-24 overflow-y-auto">{{
+
+            <pre class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 font-mono text-[10px] text-slate-300 max-h-24 overflow-y-auto leading-tight">{{
               JSON.stringify(ver.root, null, 2)
             }}</pre>
           </div>

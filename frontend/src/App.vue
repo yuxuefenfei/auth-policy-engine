@@ -39,10 +39,14 @@ const attemptCountdownText = computed(() => {
 
 const policyDecisionExplanation = computed(() => {
   if (!currentAttempt.value) return '';
-  if (currentAttempt.value.status === 'SUCCEEDED') return '所有必要因子均已满足，策略决策状态为 SATISFIED。';
-  if (currentAttempt.value.status === 'FAILED') return '由于失败次数超限或分支全灭，策略已判定为 IMPOSSIBLE。';
+  if (currentAttempt.value.status === 'SUCCEEDED') {
+    return '🎉 策略树所有条件已完整满足，认证状态机判定为 SATISFIED。可单次调用 /complete 签发 Bearer 凭证。';
+  }
+  if (currentAttempt.value.status === 'FAILED') {
+    return '❌ 由于验证失败次数达到系统安全上限，或必要分支全灭，策略判定为 IMPOSSIBLE。';
+  }
   const avail = currentAttempt.value.available.map((a) => a.nodeId).join(', ');
-  return `当前待完成节点，根据 AST 操作符规则当前开放执行的操作为: [${avail || '无'}]。`;
+  return `根据当前 AST 拓扑规则，当前开放执行的认证因子为: [${avail || '无'}]。`;
 });
 
 async function loadActive() {
@@ -100,10 +104,10 @@ async function handleCompleteLogin() {
 async function testReplayAttack() {
   if (!currentAttempt.value) return;
   loadingReplay.value = true;
-  testResults.value.replay = '正在请求...';
+  testResults.value.replay = '发起恶意重放请求中...';
   try {
     await completeAttempt(currentAttempt.value.attemptId);
-    testResults.value.replay = '异常: 竟然重复成功了(未被拦截)';
+    testResults.value.replay = '异常: 竟然重复消费成功了(未被CAS防线拦截)';
   } catch (err: any) {
     testResults.value.replay = `成功拦截防重放! HTTP ${err.status}: ${err.data?.error || err.message}`;
   } finally {
@@ -114,7 +118,7 @@ async function testReplayAttack() {
 async function testTamperedCookie() {
   if (!currentAttempt.value) return;
   loadingCookie.value = true;
-  testResults.value.cookie = '正在测试...';
+  testResults.value.cookie = '伪造凭证发起探测中...';
   try {
     const res = await fetch(`/api/login/attempts/${currentAttempt.value.attemptId}`, {
       headers: { Cookie: 'AUTH_BIND=INVALID_FAKE_TOKEN_43_CHARS_LONG_TEST_A' },
@@ -181,186 +185,261 @@ onMounted(loadActive);
 </script>
 
 <template>
-  <div class="flex flex-col min-h-screen">
-    <!-- 顶部导航栏 -->
-    <header class="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+  <div class="min-h-screen bg-slate-950 text-slate-100 flex flex-col relative overflow-hidden bg-grid-pattern selection:bg-indigo-500 selection:text-white">
+    <!-- 顶部环境光晕 -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[350px] bg-gradient-to-b from-indigo-500/15 via-purple-500/5 to-transparent blur-3xl pointer-events-none"></div>
+
+    <!-- 顶栏导航 -->
+    <header class="glass-panel sticky top-0 z-50 border-b border-slate-800/80">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center h-16">
-          <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          
+          <!-- Logo & 产品标题 -->
+          <div class="flex items-center space-x-3.5">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/20">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+              </svg>
             </div>
             <div>
-              <h1 class="text-lg font-bold text-gray-900 leading-tight">Auth Policy Engine</h1>
-              <p class="text-xs text-gray-500">动态多因子认证策略引擎 · 流程验证台</p>
+              <div class="flex items-center space-x-2">
+                <h1 class="text-sm sm:text-base font-bold text-white tracking-tight">Auth Policy Engine</h1>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 font-mono">
+                  v1.0 MVP
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-400">动态多因子认证策略引擎 · 流程验证工作台</p>
             </div>
           </div>
 
-          <nav class="flex space-x-1 sm:space-x-2">
+          <!-- 导航 Tabs -->
+          <nav class="flex items-center p-1 rounded-xl bg-slate-900/90 border border-slate-800 shadow-inner">
             <button
               @click="activeTab = 'login'"
-              :class="[activeTab === 'login' ? 'bg-blue-50 text-blue-700 font-semibold border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100']"
-              class="px-3 py-2 rounded-lg text-sm transition flex items-center space-x-1.5"
+              :class="[
+                activeTab === 'login'
+                  ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              ]"
+              class="px-3.5 py-1.5 rounded-lg text-xs transition-all duration-200 flex items-center space-x-1.5"
             >
               <span>🔑</span>
               <span>登录流程验证</span>
             </button>
             <button
               @click="activeTab = 'policy'"
-              :class="[activeTab === 'policy' ? 'bg-blue-50 text-blue-700 font-semibold border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100']"
-              class="px-3 py-2 rounded-lg text-sm transition flex items-center space-x-1.5"
+              :class="[
+                activeTab === 'policy'
+                  ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              ]"
+              class="px-3.5 py-1.5 rounded-lg text-xs transition-all duration-200 flex items-center space-x-1.5"
             >
               <span>⚙️</span>
               <span>策略编排与热更</span>
             </button>
             <button
               @click="activeTab = 'app'"
-              :class="[activeTab === 'app' ? 'bg-blue-50 text-blue-700 font-semibold border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100']"
-              class="px-3 py-2 rounded-lg text-sm transition flex items-center space-x-1.5"
+              :class="[
+                activeTab === 'app'
+                  ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              ]"
+              class="px-3.5 py-1.5 rounded-lg text-xs transition-all duration-200 flex items-center space-x-1.5"
             >
               <span>📱</span>
               <span>APP 扫码模拟端</span>
             </button>
             <button
               @click="activeTab = 'logs'"
-              :class="[activeTab === 'logs' ? 'bg-blue-50 text-blue-700 font-semibold border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100']"
-              class="px-3 py-2 rounded-lg text-sm transition flex items-center space-x-1.5"
+              :class="[
+                activeTab === 'logs'
+                  ? 'bg-indigo-600 text-white font-semibold shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+              ]"
+              class="px-3.5 py-1.5 rounded-lg text-xs transition-all duration-200 flex items-center space-x-1.5"
             >
               <span>📡</span>
-              <span>API 审计日志</span>
-              <span v-if="apiLogs.length" class="ml-1 bg-gray-200 text-gray-700 text-xs px-1.5 py-0.5 rounded-full">{{ apiLogs.length }}</span>
+              <span>审计日志</span>
+              <span v-if="apiLogs.length" class="ml-1 bg-slate-800 text-indigo-300 border border-indigo-500/30 text-[10px] px-1.5 py-0.2 rounded-full font-mono">
+                {{ apiLogs.length }}
+              </span>
             </button>
           </nav>
 
-          <div class="flex items-center space-x-3 text-xs">
-            <span class="inline-flex items-center px-2.5 py-1 rounded-full font-medium bg-green-100 text-green-800">
-              <span class="w-1.5 h-1.5 mr-1.5 bg-green-500 rounded-full"></span>
-              服务在线
-            </span>
-            <span v-if="activePolicy" class="text-gray-500 hidden md:inline">
-              生效策略: <strong class="text-gray-700">{{ activePolicy.code }} v{{ activePolicy.version }}</strong>
-            </span>
+          <!-- 状态徽标 -->
+          <div class="hidden md:flex items-center space-x-3 text-xs">
+            <div class="inline-flex items-center px-3 py-1 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-mono text-[11px]">
+              <span class="w-1.5 h-1.5 mr-2 rounded-full bg-emerald-400 animate-ping"></span>
+              <span>引擎就绪 (ONLINE)</span>
+            </div>
+            <div v-if="activePolicy" class="text-slate-400 font-mono text-[11px]">
+              策略: <strong class="text-slate-200">{{ activePolicy.code }} v{{ activePolicy.version }}</strong>
+            </div>
           </div>
+
         </div>
       </div>
     </header>
 
-    <!-- 演示账号快捷提示条 -->
-    <div class="bg-gradient-to-r from-blue-50 via-indigo-50 to-blue-50 border-b border-blue-100 px-4 py-2 text-xs text-blue-900">
-      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+    <!-- 演示账号快捷芯片条 -->
+    <div class="border-b border-slate-800/80 bg-slate-900/40 px-4 py-2.5 text-xs text-slate-300">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2.5">
         <div class="flex items-center space-x-2">
-          <span class="font-bold text-blue-800">💡 本地演示预置账号：</span>
-          <button @click="fillUser('alice')" class="px-2 py-0.5 bg-white border border-blue-200 rounded hover:bg-blue-100 transition font-mono">
-            alice / Demo@123456 (13800000000 · 普通用户)
+          <span class="text-slate-400 text-xs flex items-center space-x-1">
+            <span>💡 演示预置账号:</span>
+          </span>
+          <button
+            @click="fillUser('alice')"
+            class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500/50 text-slate-200 font-mono transition text-xs flex items-center space-x-1.5 shadow-sm"
+          >
+            <span>👤 alice</span>
+            <span class="text-slate-500">|</span>
+            <span class="text-slate-400 text-[11px]">Demo@123456</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300">USER</span>
           </button>
-          <button @click="fillUser('admin')" class="px-2 py-0.5 bg-white border border-blue-200 rounded hover:bg-blue-100 transition font-mono">
-            admin / Admin@123456 (13900000000 · 管理员)
+          <button
+            @click="fillUser('admin')"
+            class="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 hover:border-indigo-500/50 text-slate-200 font-mono transition text-xs flex items-center space-x-1.5 shadow-sm"
+          >
+            <span>🛡️ admin</span>
+            <span class="text-slate-500">|</span>
+            <span class="text-slate-400 text-[11px]">Admin@123456</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300">ADMIN</span>
           </button>
         </div>
-        <div class="flex items-center space-x-2">
-          <span class="text-blue-700">短信控制台模拟:</span>
-          <span class="font-semibold text-green-700">自动检测已就绪</span>
+
+        <div class="flex items-center space-x-2 font-mono text-[11px] text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span>短信网关模式: 控制台实时模拟 (demo-sms-log)</span>
         </div>
       </div>
     </div>
 
-    <!-- 主体区域 -->
+    <!-- 主视口区域 -->
     <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+      
       <!-- TAB 1: 登录验证台 -->
       <div v-show="activeTab === 'login'" class="space-y-6">
-        <div v-if="!currentAttempt" class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-gray-200 max-w-2xl mx-auto">
-          <div class="text-center mb-6">
-            <div class="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-inner">
-              <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+        
+        <!-- 未创建流程：居中现代卡片 -->
+        <div v-if="!currentAttempt" class="max-w-xl mx-auto my-12">
+          <div class="glass-panel rounded-3xl p-8 border border-slate-800 shadow-2xl relative overflow-hidden backdrop-blur-xl">
+            <div class="text-center space-y-2 mb-8">
+              <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center text-2xl mx-auto shadow-xl shadow-indigo-500/20 ring-1 ring-white/20">
+                🚀
+              </div>
+              <h2 class="text-xl font-bold text-white tracking-tight">发起动态认证流程</h2>
+              <p class="text-xs text-slate-400 max-w-sm mx-auto leading-relaxed">
+                提交待认证用户名，引擎将动态解析当前生效的策略 AST，锁定不可变的流程快照并下发浏览器绑定凭据。
+              </p>
             </div>
-            <h2 class="text-xl font-bold text-gray-900">发起动态认证流程</h2>
-            <p class="text-sm text-gray-500 mt-1">提交用户名，引擎将读取当前生效的策略 AST 并生成不可变的流程快照</p>
+
+            <form @submit.prevent="handleCreateAttempt" class="space-y-5">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">登录用户名</label>
+                <div class="relative">
+                  <input
+                    v-model="loginUsername"
+                    type="text"
+                    required
+                    placeholder="输入 alice 或 admin"
+                    class="w-full px-4 py-3 bg-slate-900/90 border border-slate-700/80 rounded-2xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition font-mono"
+                  />
+                </div>
+              </div>
+
+              <!-- 策略快照元信息说明 -->
+              <div class="p-4 bg-slate-900/60 rounded-2xl border border-slate-800/80 text-xs space-y-2 font-mono">
+                <div class="flex justify-between items-center text-slate-400">
+                  <span>生效策略标识:</span>
+                  <span class="text-indigo-400 font-bold">{{ activePolicy?.code || 'WEB_LOGIN' }}</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-400">
+                  <span>策略快照版本:</span>
+                  <span class="text-slate-200 font-bold">Version {{ activePolicy?.version || 1 }}</span>
+                </div>
+                <div class="flex justify-between items-center text-slate-400">
+                  <span>防伪绑定机制:</span>
+                  <span class="text-emerald-400 font-semibold">AUTH_BIND (HttpOnly Cookie)</span>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                :disabled="loadingCreate"
+                class="w-full py-3.5 bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-bold rounded-2xl shadow-xl shadow-indigo-600/25 transition-all duration-200 transform active:scale-98 disabled:opacity-50 flex items-center justify-center space-x-2 text-sm"
+              >
+                <span v-if="loadingCreate" class="animate-spin">🔄</span>
+                <span>创建登录 Attempt 流程 ↵</span>
+              </button>
+            </form>
           </div>
-
-          <form @submit.prevent="handleCreateAttempt" class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">登录用户名</label>
-              <input
-                v-model="loginUsername"
-                type="text"
-                required
-                placeholder="例如: alice 或 admin"
-                class="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
-              />
-            </div>
-
-            <div class="bg-gray-50 rounded-xl p-3 text-xs text-gray-600 space-y-1 border border-gray-200">
-              <div class="flex justify-between">
-                <span>当前生效策略代码:</span>
-                <span class="font-mono font-semibold">{{ activePolicy?.code || 'WEB_LOGIN' }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span>策略版本:</span>
-                <span class="font-mono font-semibold">Version {{ activePolicy?.version || 1 }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span>浏览器安全绑定:</span>
-                <span class="text-indigo-600 font-semibold">AUTH_BIND (HttpOnly/Strict Cookie)</span>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              :disabled="loadingCreate"
-              class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold shadow hover:from-blue-700 hover:to-indigo-700 transition disabled:opacity-50 flex items-center justify-center space-x-2"
-            >
-              <span v-if="loadingCreate" class="animate-spin mr-2">🔄</span>
-              <span>创建登录 Attempt</span>
-            </button>
-          </form>
         </div>
 
+        <!-- 流程执行中：双栏现代交互控制台 -->
         <div v-else class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <!-- 左栏：策略树拓扑 -->
+          
+          <!-- 左栏：策略 AST 树与状态机 (5 列) -->
           <div class="lg:col-span-5 space-y-6">
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
-              <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+            <div class="glass-panel rounded-3xl p-6 border border-slate-800 space-y-5 shadow-2xl">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-800">
                 <div class="flex items-center space-x-2">
-                  <span class="text-blue-600 font-bold">🌳 策略树拓扑</span>
-                  <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-mono font-semibold">
+                  <span class="text-indigo-400 font-bold text-sm">🌳 策略执行拓扑</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono border border-indigo-500/30">
                     v{{ currentAttempt.policyVersion }} 快照
                   </span>
                 </div>
-                <button @click="resetAttempt" class="text-xs text-gray-500 hover:text-red-600 transition flex items-center space-x-1">
+                <button
+                  @click="resetAttempt"
+                  class="text-xs text-slate-500 hover:text-rose-400 transition flex items-center space-x-1"
+                >
                   <span>❌ 放弃本次流程</span>
                 </button>
               </div>
 
-              <!-- Attempt 元信息 -->
-              <div class="my-3 p-3 bg-gray-50 rounded-xl text-xs space-y-1.5 border border-gray-100">
+              <!-- Attempt 核心元数据 -->
+              <div class="p-4 bg-slate-900/80 rounded-2xl border border-slate-800 text-xs space-y-2 font-mono">
                 <div class="flex justify-between items-center">
-                  <span class="text-gray-500">Attempt ID:</span>
-                  <span class="font-mono text-gray-800 truncate max-w-[200px]" :title="currentAttempt.attemptId">
+                  <span class="text-slate-500">Attempt ID:</span>
+                  <span class="text-slate-200 truncate max-w-[200px]" :title="currentAttempt.attemptId">
                     {{ currentAttempt.attemptId }}
                   </span>
                 </div>
                 <div class="flex justify-between items-center">
-                  <span class="text-gray-500">状态:</span>
-                  <span class="font-bold px-2 py-0.5 rounded text-xs font-mono bg-blue-100 text-blue-800">
+                  <span class="text-slate-500">状态机状态:</span>
+                  <span
+                    class="font-bold px-2 py-0.5 rounded text-[11px] border"
+                    :class="[
+                      currentAttempt.status === 'SUCCEEDED'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : currentAttempt.status === 'CONSUMED'
+                        ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
+                        : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
+                    ]"
+                  >
                     {{ currentAttempt.status }}
                   </span>
                 </div>
                 <div class="flex justify-between items-center">
-                  <span class="text-gray-500">过期倒计时:</span>
-                  <span class="font-mono text-indigo-600 font-semibold">{{ attemptCountdownText }}</span>
+                  <span class="text-slate-500">时效倒计时:</span>
+                  <span class="text-indigo-300 font-semibold">{{ attemptCountdownText }}</span>
                 </div>
                 <div class="flex justify-between items-center">
-                  <span class="text-gray-500">条件已全部满足:</span>
-                  <span :class="currentAttempt.canComplete ? 'text-green-600 font-bold' : 'text-gray-400 font-semibold'">
-                    {{ currentAttempt.canComplete ? '✅ YES (可签发令牌)' : '⏳ NO (仍需满足条件)' }}
+                  <span class="text-slate-500">条件满足判断:</span>
+                  <span
+                    class="font-bold"
+                    :class="currentAttempt.canComplete ? 'text-emerald-400' : 'text-slate-500'"
+                  >
+                    {{ currentAttempt.canComplete ? '✅ SATISFIED (可完成)' : '⏳ PENDING (仍需满足)' }}
                   </span>
                 </div>
               </div>
 
-              <!-- 拓扑节点可视化 -->
-              <div class="mt-4 space-y-3">
-                <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wider">执行状态树</h4>
-                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200">
+              <!-- 拓扑执行树 -->
+              <div class="space-y-3">
+                <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">执行拓扑分支</h4>
+                <div class="p-4 bg-slate-900/60 rounded-2xl border border-slate-800">
                   <PolicyNodeViewer
                     :node="currentAttemptAst"
                     :progress="currentAttempt.progress"
@@ -369,49 +448,58 @@ onMounted(loadActive);
                 </div>
               </div>
 
-              <!-- 决策解读 -->
-              <div class="mt-4 p-3 bg-blue-50/60 rounded-xl border border-blue-100 text-xs text-blue-900 leading-relaxed">
-                <span class="font-bold">🔍 引擎决策解析：</span>
-                <p class="mt-1 text-blue-800">{{ policyDecisionExplanation }}</p>
+              <!-- 智能决策解读框 -->
+              <div class="p-4 rounded-2xl bg-indigo-950/30 border border-indigo-500/30 text-xs text-indigo-200 leading-relaxed">
+                <span class="font-bold flex items-center space-x-1.5 text-indigo-300 mb-1">
+                  <span>🔍 引擎决策解析：</span>
+                </span>
+                <p class="text-indigo-200/90">{{ policyDecisionExplanation }}</p>
               </div>
             </div>
           </div>
 
-          <!-- 右栏：因子交互区 -->
+          <!-- 右栏：动态可用因子执行交互区 (7 列) -->
           <div class="lg:col-span-7 space-y-6">
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-6">
-              <div class="flex items-center justify-between border-b border-gray-100 pb-4">
+            
+            <div class="glass-panel rounded-3xl p-6 border border-slate-800 space-y-6 shadow-2xl">
+              <div class="flex items-center justify-between pb-4 border-b border-slate-800">
                 <div>
-                  <h3 class="text-base font-bold text-gray-900">认证因子执行区</h3>
-                  <p class="text-xs text-gray-500">
-                    当前可用认证因子: {{ currentAttempt.available.map((a) => a.nodeId).join(', ') || '无' }}
-                  </p>
+                  <h3 class="text-base font-bold text-white flex items-center space-x-2">
+                    <span>认证因子执行区</span>
+                    <span class="text-xs font-normal text-slate-400">
+                      (开放因子: {{ currentAttempt.available.map((a) => a.nodeId).join(', ') || '无' }})
+                    </span>
+                  </h3>
                 </div>
                 <button
                   @click="handleRefreshStatus"
                   :disabled="loadingRefresh"
-                  class="px-2.5 py-1 text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition flex items-center space-x-1"
+                  class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700/80 rounded-xl text-xs font-medium transition flex items-center space-x-1"
                 >
                   <span :class="{ 'animate-spin': loadingRefresh }">🔄</span>
                   <span>刷新状态</span>
                 </button>
               </div>
 
-              <!-- 全部满足时显示完成按钮 -->
+              <!-- 全条件满足：发光完成卡片 -->
               <div
-                v-if="currentAttempt.canComplete && currentAttempt.status === 'IN_PROGRESS'"
-                class="bg-green-50 border border-green-200 rounded-2xl p-6 text-center space-y-3 shadow-sm"
+                v-if="currentAttempt.canComplete && !completedSession"
+                class="p-6 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-emerald-900/20 to-emerald-950/40 border border-emerald-500/50 shadow-xl shadow-emerald-500/10 text-center space-y-3 animate-subtle-pulse"
               >
-                <div class="w-12 h-12 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto text-xl">🎉</div>
-                <h4 class="text-base font-bold text-green-900">恭喜！策略树全部条件已达成</h4>
-                <p class="text-xs text-green-700 max-w-md mx-auto">认证决策已满足 SATISFIED 状态。请点击下方按钮原子消费 Attempt 并获取 Bearer 会话令牌。</p>
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-2xl mx-auto shadow-inner">
+                  🎉
+                </div>
+                <h4 class="text-base font-bold text-emerald-200">策略树所有条件已达成！</h4>
+                <p class="text-xs text-emerald-300/80 max-w-md mx-auto">
+                  策略求值引擎判定通过。点击下方按钮原子消费 Attempt，签发 Bearer 令牌。
+                </p>
                 <button
                   @click="handleCompleteLogin"
                   :disabled="loadingComplete"
-                  class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition transform active:scale-95 disabled:opacity-50 flex items-center justify-center mx-auto space-x-2"
+                  class="px-8 py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold rounded-2xl shadow-xl shadow-emerald-500/20 transition transform active:scale-98 disabled:opacity-50 inline-flex items-center space-x-2 text-sm"
                 >
                   <span v-if="loadingComplete" class="animate-spin">🔄</span>
-                  <span>🚀 完成登录流程并签发会话令牌</span>
+                  <span>🚀 完成登录并签发会话令牌 (Complete)</span>
                 </button>
               </div>
 
@@ -448,82 +536,107 @@ onMounted(loadActive);
               />
             </div>
 
-            <!-- 登录完成与安全实验室 -->
-            <div v-if="completedSession" class="bg-white rounded-2xl p-6 shadow-sm border border-green-200 space-y-5">
-              <div class="flex items-center justify-between pb-3 border-b border-green-100">
-                <div class="flex items-center space-x-2">
-                  <span class="w-7 h-7 bg-green-100 text-green-700 rounded-lg flex items-center justify-center font-bold">🛡️</span>
-                  <h3 class="text-base font-bold text-green-900">会话签发与安全防御实验室</h3>
+            <!-- 登录完成与安全防御实验室 -->
+            <div
+              v-if="completedSession"
+              class="glass-panel rounded-3xl p-6 border border-emerald-500/40 shadow-2xl space-y-6"
+            >
+              <div class="flex items-center justify-between pb-3 border-b border-emerald-500/20">
+                <div class="flex items-center space-x-2.5">
+                  <span class="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
+                    🛡️
+                  </span>
+                  <h3 class="text-base font-bold text-white">会话签发与安全攻防实验室</h3>
                 </div>
-                <span class="text-xs bg-green-100 text-green-800 font-bold px-2 py-0.5 rounded-full">AUTHENTICATED</span>
+                <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono font-bold border border-emerald-500/30">
+                  AUTHENTICATED
+                </span>
               </div>
 
-              <div class="p-4 bg-gray-900 text-green-400 rounded-xl font-mono text-xs space-y-2">
-                <div class="flex justify-between">
-                  <span class="text-gray-400">Token Type:</span>
-                  <span class="text-white">{{ completedSession.tokenType || 'Bearer' }}</span>
+              <!-- 会话令牌信息 -->
+              <div class="p-5 bg-slate-900/90 rounded-2xl border border-slate-800 font-mono text-xs space-y-2.5">
+                <div class="flex justify-between text-slate-400">
+                  <span>Token 协议类型:</span>
+                  <span class="text-slate-200">{{ completedSession.tokenType || 'Bearer' }}</span>
                 </div>
                 <div>
-                  <span class="text-gray-400 block mb-1">Access Token:</span>
-                  <div class="bg-gray-800 p-2 rounded break-all select-all text-green-300 font-bold">
+                  <span class="text-slate-400 block mb-1">Access Token (单次签发 Opaque 哈希令牌):</span>
+                  <div class="p-3 bg-slate-950 rounded-xl border border-slate-800 break-all select-all text-emerald-400 font-bold leading-relaxed">
                     {{ completedSession.accessToken }}
                   </div>
                 </div>
-                <div class="flex justify-between">
-                  <span class="text-gray-400">Current User (/api/me):</span>
-                  <span class="text-yellow-400 font-bold">{{ sessionUser?.username || '未获取' }}</span>
+                <div class="flex justify-between items-center pt-1 border-t border-slate-800/80">
+                  <span class="text-slate-400">受保护接口验证 (/api/me):</span>
+                  <span class="text-yellow-400 font-bold font-sans">
+                    用户: {{ sessionUser?.username || '获取中...' }}
+                  </span>
                 </div>
               </div>
 
-              <div class="space-y-2">
-                <h4 class="text-xs font-bold text-gray-700 uppercase tracking-wider">安全边界实测 (Security Edge Cases):</h4>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                  <div class="p-3 bg-red-50 border border-red-200 rounded-xl space-y-1.5">
-                    <span class="font-bold text-red-900">🧪 测试防重放 (Replay Attack)</span>
-                    <p class="text-red-700 text-[11px]">再次调用 /complete 消费同一 Attempt。预期返回 403 Forbidden。</p>
+              <!-- 安全攻防边界实测卡片 -->
+              <div class="space-y-3">
+                <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">安全边界攻防实测 (Security Edge Cases):</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  
+                  <!-- 测试防重放 -->
+                  <div class="p-4 bg-rose-950/20 border border-rose-900/40 rounded-2xl space-y-2">
+                    <span class="font-bold text-rose-300 flex items-center space-x-1">
+                      <span>🧪 测试防重放攻击 (Replay Attack)</span>
+                    </span>
+                    <p class="text-slate-400 text-[11px] leading-snug">
+                      尝试再次向 /complete 发起消费请求。预期触发 CAS 原子排他锁，返回 403 Forbidden。
+                    </p>
                     <button
                       @click="testReplayAttack"
                       :disabled="loadingReplay"
-                      class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition"
+                      class="w-full py-2 bg-rose-600/80 hover:bg-rose-600 text-white rounded-xl font-semibold transition disabled:opacity-50"
                     >
-                      触发重复消费尝试
+                      再次提交消费 Attempt
                     </button>
-                    <p v-if="testResults.replay" class="font-mono text-[11px] p-1 bg-white rounded border border-red-200 text-red-800">
+                    <p v-if="testResults.replay" class="font-mono text-[11px] p-2 bg-slate-950 rounded-lg border border-rose-900/40 text-rose-300">
                       {{ testResults.replay }}
                     </p>
                   </div>
 
-                  <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-xl space-y-1.5">
-                    <span class="font-bold text-indigo-900">🧪 测试伪造 Cookie 绑定</span>
-                    <p class="text-indigo-700 text-[11px]">向后端查询 Attempt 状态但不带合法 AUTH_BIND 绑定。预期返回 403。</p>
+                  <!-- 测试 Cookie 篡改 -->
+                  <div class="p-4 bg-indigo-950/20 border border-indigo-900/40 rounded-2xl space-y-2">
+                    <span class="font-bold text-indigo-300 flex items-center space-x-1">
+                      <span>🧪 测试伪造 Cookie 绑定</span>
+                    </span>
+                    <p class="text-slate-400 text-[11px] leading-snug">
+                      伪造无效的 AUTH_BIND 凭证发起查询。预期触发跨浏览器绑定防御，返回 403 Forbidden。
+                    </p>
                     <button
                       @click="testTamperedCookie"
                       :disabled="loadingCookie"
-                      class="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition"
+                      class="w-full py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl font-semibold transition disabled:opacity-50"
                     >
-                      伪造无效绑定凭证测试
+                      伪造绑定凭据请求
                     </button>
-                    <p v-if="testResults.cookie" class="font-mono text-[11px] p-1 bg-white rounded border border-indigo-200 text-indigo-800">
+                    <p v-if="testResults.cookie" class="font-mono text-[11px] p-2 bg-slate-950 rounded-lg border border-indigo-900/40 text-indigo-300">
                       {{ testResults.cookie }}
                     </p>
                   </div>
+
                 </div>
               </div>
 
               <div class="pt-2 flex justify-end">
                 <button
                   @click="resetAttempt"
-                  class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-lg transition"
+                  class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition"
                 >
-                  退出登录 / 测试下一个流程
+                  重置流程 / 测试下一轮
                 </button>
               </div>
             </div>
+
           </div>
         </div>
+
       </div>
 
-      <!-- TAB 2: 策略管理与热更新 -->
+      <!-- TAB 2: 策略编排与热更工作台 -->
       <div v-show="activeTab === 'policy'">
         <PolicyStudio />
       </div>
@@ -537,10 +650,12 @@ onMounted(loadActive);
       <div v-show="activeTab === 'logs'">
         <AuditLogViewer />
       </div>
+
     </main>
 
-    <footer class="bg-white border-t border-gray-200 py-3 px-4 text-center text-xs text-gray-500">
-      Spring Boot 3.5.16 · Spring Security 6 · 动态认证策略引擎 MVP · 支持 AST 组合求值、CAS 原子状态机与快照隔离
+    <!-- 底栏 -->
+    <footer class="glass-panel border-t border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500 font-mono">
+      Spring Boot 3.5.16 · Spring Security 6 · 动态认证策略引擎 · AST 组合求值 · CAS 原子状态机 · 快照隔离
     </footer>
   </div>
 </template>

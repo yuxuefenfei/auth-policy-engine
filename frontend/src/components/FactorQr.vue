@@ -19,10 +19,12 @@ const qrTicket = ref('');
 const expiresAtText = ref('');
 const loadingStart = ref(false);
 const loadingApprove = ref(false);
+const errorMessage = ref('');
 let pollTimer: any = null;
 
 async function handleStart() {
   loadingStart.value = true;
+  errorMessage.value = '';
   try {
     const res = await startFactor(props.attempt.attemptId, props.nodeId);
     emit('updated', res.attempt);
@@ -33,7 +35,7 @@ async function handleStart() {
     renderQrCode(res.qrTicket || '');
     startPolling();
   } catch (err: any) {
-    alert('生成二维码挑战失败: ' + (err.data?.error || err.message));
+    errorMessage.value = err.data?.error || err.message || '生成二维码失败';
   } finally {
     loadingStart.value = false;
   }
@@ -48,9 +50,9 @@ function renderQrCode(text: string) {
     // @ts-ignore
     new window.QRCode(container, {
       text,
-      width: 120,
-      height: 120,
-      colorDark: '#4f46e5',
+      width: 140,
+      height: 140,
+      colorDark: '#0f172a',
       colorLight: '#ffffff',
     });
   } else {
@@ -76,13 +78,14 @@ function startPolling() {
 async function simulateAppApprove() {
   if (!qrTicket.value) return;
   loadingApprove.value = true;
+  errorMessage.value = '';
   try {
     const pwd = props.username === 'admin' ? 'Admin@123456' : 'Demo@123456';
     const res = await approveQr(qrTicket.value, props.username, pwd);
     emit('updated', res);
     if (pollTimer) clearInterval(pollTimer);
   } catch (err: any) {
-    alert('模拟扫码授权失败: ' + (err.data?.error || err.message));
+    errorMessage.value = err.data?.error || err.message || '扫码确认失败';
   } finally {
     loadingApprove.value = false;
   }
@@ -95,83 +98,139 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="rounded-xl p-5 border transition"
+    class="rounded-2xl p-6 border transition-all duration-300 relative overflow-hidden backdrop-blur-md"
     :class="[
       progress === 'VERIFIED'
-        ? 'bg-green-50/60 border-green-200'
+        ? 'bg-emerald-950/20 border-emerald-500/40 shadow-lg shadow-emerald-500/5'
         : isAvailable
-        ? 'bg-white border-purple-300 ring-2 ring-purple-100 shadow-sm'
-        : 'bg-gray-50/70 border-gray-200 opacity-60'
+        ? 'bg-slate-900/80 border-purple-500/50 shadow-xl shadow-purple-500/10 ring-1 ring-purple-500/20'
+        : 'bg-slate-900/40 border-slate-800/80 opacity-60'
     ]"
   >
-    <div class="flex items-center justify-between mb-3">
-      <div class="flex items-center space-x-2.5">
-        <span class="w-8 h-8 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-sm">📲</span>
+    <!-- 头部 -->
+    <div class="flex items-center justify-between mb-4">
+      <div class="flex items-center space-x-3">
+        <div
+          class="w-10 h-10 rounded-xl flex items-center justify-center text-lg shadow-inner"
+          :class="progress === 'VERIFIED' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-purple-500/20 text-purple-400'"
+        >
+          <span>📲</span>
+        </div>
         <div>
-          <h4 class="text-sm font-bold text-gray-900">APP 扫码确认 (APP_QR_APPROVAL)</h4>
-          <span class="text-xs text-gray-500 font-mono">nodeId: {{ nodeId }} · 需由已认证 APP 调用</span>
+          <h4 class="text-sm font-bold text-slate-100 flex items-center space-x-2">
+            <span>APP 扫码跨端认证 (APP_QR_APPROVAL)</span>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">90s TTL</span>
+          </h4>
+          <span class="text-xs text-slate-400 font-mono">节点 ID: {{ nodeId }}</span>
         </div>
       </div>
+
       <span
-        class="px-2.5 py-1 text-xs rounded-full font-semibold"
-        :class="progress === 'VERIFIED' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'"
+        class="px-2.5 py-1 text-xs rounded-full font-mono font-semibold border"
+        :class="[
+          progress === 'VERIFIED'
+            ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+            : isAvailable
+            ? 'bg-purple-500/20 text-purple-300 border-purple-500/30 ring-1 ring-purple-500/20'
+            : 'bg-slate-800 text-slate-400 border-slate-700'
+        ]"
       >
-        {{ progress }}
+        {{ progress === 'VERIFIED' ? '✓ 授权通过' : progress }}
       </span>
     </div>
 
-    <div v-if="progress === 'VERIFIED'" class="text-xs text-green-700 bg-green-50 p-2.5 rounded-lg border border-green-200 flex items-center space-x-2">
-      <span>✅</span>
-      <span>APP 端已成功扫码并授权本次登录！</span>
-    </div>
-    <div v-else-if="!isAvailable" class="text-xs text-gray-400 bg-gray-50 p-2.5 rounded-lg border border-gray-200">
-      ⚠️ 当前步骤不可执行。
-    </div>
-    <div v-else class="space-y-4">
-      <!-- 未生成二维码 -->
-      <div v-if="!qrTicket" class="text-center py-4">
-        <button
-          @click="handleStart"
-          :disabled="loadingStart"
-          class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-semibold transition shadow disabled:opacity-50 flex items-center justify-center mx-auto space-x-1.5"
-        >
-          <span v-if="loadingStart" class="animate-spin">🔄</span>
-          <span>📷 生成登录二维码 (Start Challenge)</span>
-        </button>
-        <p class="text-xs text-gray-500 mt-2">服务端将签发一次性随机 Ticket (90秒有效期)</p>
+    <!-- 状态：已通过 -->
+    <div v-if="progress === 'VERIFIED'" class="p-3.5 bg-emerald-950/30 rounded-xl border border-emerald-500/30 flex items-center space-x-3 text-xs text-emerald-300">
+      <span class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center font-bold text-emerald-400">✓</span>
+      <div>
+        <p class="font-semibold">移动端 APP 扫码授权成功</p>
+        <p class="text-[11px] text-emerald-400/80">已通过独立移动端身份完成反向签名授权，Ticket 已被单次原子核销。</p>
       </div>
+    </div>
 
-      <!-- 二维码展示 -->
-      <div v-else class="flex flex-col sm:flex-row items-center gap-6 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
-        <div class="flex flex-col items-center">
-          <div id="qr-canvas-container" class="bg-white p-2.5 rounded-xl border shadow-sm w-36 h-36 flex items-center justify-center"></div>
-          <span class="text-xs text-purple-700 font-semibold mt-2 animate-pulse">⏳ 正在等待 APP 授权...</span>
+    <!-- 状态：不可用 -->
+    <div v-else-if="!isAvailable" class="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-400 flex items-center space-x-2">
+      <span>🔒</span>
+      <span>当前因子不可执行（需满足前序条件或已被短路跳过）。</span>
+    </div>
+
+    <!-- 状态：未生成二维码 -->
+    <div v-else-if="!qrTicket" class="text-center py-6 border border-dashed border-slate-700/80 rounded-2xl bg-slate-950/40">
+      <div class="w-12 h-12 rounded-2xl bg-purple-500/10 text-purple-400 flex items-center justify-center text-xl mx-auto mb-3 shadow-inner">
+        📷
+      </div>
+      <h5 class="text-xs font-semibold text-slate-200">未就绪的扫码挑战</h5>
+      <p class="text-[11px] text-slate-500 mt-1 max-w-sm mx-auto">
+        点击下方按钮将由服务端生成带有唯一防篡改哈希的一次性二维码 Ticket。
+      </p>
+      <button
+        type="button"
+        @click="handleStart"
+        :disabled="loadingStart"
+        class="mt-4 px-5 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold rounded-xl text-xs transition shadow-lg shadow-purple-600/20 disabled:opacity-50 inline-flex items-center space-x-2"
+      >
+        <span v-if="loadingStart" class="animate-spin">🔄</span>
+        <span>生成动态登录二维码 (Start Challenge)</span>
+      </button>
+    </div>
+
+    <!-- 状态：二维码展示与等待扫码 -->
+    <div v-else class="space-y-4">
+      <div class="p-5 bg-slate-950/80 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center gap-6">
+        <!-- 扫码取景框 -->
+        <div class="relative p-2.5 bg-white rounded-xl shadow-2xl flex flex-col items-center justify-center overflow-hidden">
+          <div id="qr-canvas-container" class="w-[140px] h-[140px] flex items-center justify-center"></div>
+          <!-- 激光扫描线动画 -->
+          <div class="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-scan pointer-events-none"></div>
+          <!-- 四角激光准心 -->
+          <div class="absolute top-1 left-1 w-2.5 h-2.5 border-t-2 border-l-2 border-indigo-600 pointer-events-none"></div>
+          <div class="absolute top-1 right-1 w-2.5 h-2.5 border-t-2 border-r-2 border-indigo-600 pointer-events-none"></div>
+          <div class="absolute bottom-1 left-1 w-2.5 h-2.5 border-b-2 border-l-2 border-indigo-600 pointer-events-none"></div>
+          <div class="absolute bottom-1 right-1 w-2.5 h-2.5 border-b-2 border-r-2 border-indigo-600 pointer-events-none"></div>
         </div>
-        <div class="flex-1 space-y-2 text-xs">
-          <div>
-            <span class="text-gray-500 block">Ticket 原文:</span>
-            <code class="bg-white px-2 py-1 rounded border font-mono text-purple-900 break-all select-all block mt-0.5">{{ qrTicket }}</code>
-          </div>
-          <div class="text-gray-600">
-            <span>有效期至: </span>
-            <span class="font-mono font-semibold">{{ expiresAtText }}</span>
+
+        <div class="flex-1 space-y-2.5 text-xs">
+          <div class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 font-mono text-[10px] animate-pulse">
+            <span class="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
+            <span>正在实时监听 APP 授权 (每 1.5s 轮询)...</span>
           </div>
 
-          <!-- 模拟确认 -->
-          <div class="pt-2 border-t border-purple-100 flex flex-wrap gap-2 items-center">
+          <div>
+            <span class="text-slate-400 block text-[11px]">一次性 Ticket:</span>
+            <code class="block mt-0.5 p-2 bg-slate-900 border border-slate-800 rounded-lg font-mono text-[11px] text-purple-300 break-all select-all">
+              {{ qrTicket }}
+            </code>
+          </div>
+
+          <div class="flex items-center justify-between text-slate-400 text-[11px]">
+            <span>时效截至: <strong class="text-slate-200 font-mono">{{ expiresAtText }}</strong></span>
             <button
+              type="button"
+              @click="handleStart"
+              class="text-indigo-400 hover:text-indigo-300 underline font-mono"
+            >
+              刷新二维码 ↻
+            </button>
+          </div>
+
+          <!-- 模拟确认快捷动作条 -->
+          <div class="pt-2 border-t border-slate-800/80 flex items-center space-x-2">
+            <button
+              type="button"
               @click="simulateAppApprove"
               :disabled="loadingApprove"
-              class="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition flex items-center space-x-1"
+              class="flex-1 py-2 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl font-semibold transition text-xs shadow-md shadow-purple-600/20 disabled:opacity-50 flex items-center justify-center space-x-1.5"
             >
-              <span>📱</span>
-              <span>作为 {{ username }} 一键扫码确认</span>
-            </button>
-            <button @click="handleStart" class="px-2.5 py-1.5 bg-white border border-purple-200 text-purple-700 rounded-lg hover:bg-purple-50 transition">
-              刷新二维码
+              <span v-if="loadingApprove" class="animate-spin">🔄</span>
+              <span>📱 一键作为 {{ username }} 模拟扫码确认</span>
             </button>
           </div>
         </div>
+      </div>
+
+      <div v-if="errorMessage" class="p-3 bg-rose-950/30 border border-rose-500/40 rounded-xl text-xs text-rose-300 flex items-center space-x-2">
+        <span>⚠️</span>
+        <span>{{ errorMessage }}</span>
       </div>
     </div>
   </div>

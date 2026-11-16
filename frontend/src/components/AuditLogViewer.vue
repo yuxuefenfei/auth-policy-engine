@@ -1,5 +1,13 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue';
 import { apiLogs } from '../api/auth';
+
+const filterMethod = ref('ALL');
+
+const filteredLogs = computed(() => {
+  if (filterMethod.value === 'ALL') return apiLogs.value;
+  return apiLogs.value.filter((l) => l.method === filterMethod.value);
+});
 
 function clearLogs() {
   apiLogs.value = [];
@@ -7,47 +15,73 @@ function clearLogs() {
 </script>
 
 <template>
-  <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 space-y-4">
-    <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+  <div class="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4 shadow-xl">
+    <div class="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
       <div>
-        <h3 class="text-sm font-bold text-gray-900">API 请求与状态机转移审计记录</h3>
-        <p class="text-xs text-gray-500">跟踪前端发出的每一条请求及响应体、延迟和状态码</p>
+        <h3 class="text-sm font-bold text-slate-100 flex items-center space-x-2">
+          <span>📡 API 交互与 CAS 状态转移审计追踪器</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono">
+            {{ filteredLogs.length }} 笔记录
+          </span>
+        </h3>
+        <p class="text-xs text-slate-400">实时监听捕获前端向后端发出的每一笔网络请求、Payload、状态码与响应体</p>
       </div>
-      <button
-        @click="clearLogs"
-        class="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-semibold transition"
+
+      <div class="flex items-center space-x-2 text-xs">
+        <select
+          v-model="filterMethod"
+          class="bg-slate-900 border border-slate-800 text-slate-300 px-2.5 py-1.5 rounded-xl font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500"
+        >
+          <option value="ALL">全部请求 (ALL)</option>
+          <option value="POST">POST 状态变更</option>
+          <option value="GET">GET 状态轮询</option>
+        </select>
+        <button
+          @click="clearLogs"
+          class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-xl transition font-medium"
+        >
+          清空追踪日志
+        </button>
+      </div>
+    </div>
+
+    <div v-if="!filteredLogs.length" class="text-center py-16 text-slate-500 text-xs font-mono">
+      暂无 API 调用记录。在验证台执行登录或策略热更时将自动实时捕获。
+    </div>
+
+    <div v-else class="space-y-3 font-mono text-xs max-h-[600px] overflow-y-auto pr-1">
+      <div
+        v-for="(log, idx) in filteredLogs"
+        :key="idx"
+        class="p-4 rounded-xl border border-slate-800/80 bg-slate-900/60 hover:border-slate-700 transition space-y-2.5 backdrop-blur-sm"
       >
-        清空日志
-      </button>
-    </div>
-
-    <div v-if="!apiLogs.length" class="text-center py-12 text-gray-400 text-sm">
-      暂无调用记录。进行登录操作或切换策略时将自动记录。
-    </div>
-
-    <div v-else class="space-y-3 font-mono text-xs">
-      <div v-for="(log, idx) in apiLogs" :key="idx" class="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2">
         <div class="flex items-center justify-between">
-          <div class="flex items-center space-x-2">
+          <div class="flex items-center space-x-2.5">
             <span
-              :class="typeof log.status === 'number' && log.status >= 200 && log.status < 300 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'"
-              class="px-2 py-0.5 rounded font-bold"
+              class="px-2 py-0.5 rounded-md font-bold text-[10px] border"
+              :class="[
+                typeof log.status === 'number' && log.status >= 200 && log.status < 300
+                  ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                  : 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+              ]"
             >
               {{ log.method }} {{ log.status }}
             </span>
-            <span class="text-gray-800 font-semibold">{{ log.url }}</span>
+            <span class="text-slate-200 font-semibold break-all">{{ log.url }}</span>
           </div>
-          <span class="text-gray-400 text-[11px]">{{ log.time }}</span>
+          <span class="text-slate-500 text-[11px]">{{ log.time }}</span>
         </div>
 
-        <div v-if="log.body" class="text-[11px] text-gray-600 bg-white p-2 rounded border border-gray-100">
-          <span class="text-gray-400 block mb-0.5">Payload:</span>
-          <pre class="overflow-x-auto">{{ log.body }}</pre>
+        <div v-if="log.body" class="text-[11px] bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 text-slate-300">
+          <span class="text-slate-500 block text-[10px] mb-1 font-semibold">请求报文 Payload:</span>
+          <pre class="overflow-x-auto text-indigo-300 leading-tight">{{ log.body }}</pre>
         </div>
 
-        <div class="text-[11px] bg-gray-900 text-green-400 p-2 rounded max-h-36 overflow-y-auto">
-          <span class="text-gray-400 block mb-0.5">Response:</span>
-          <pre class="overflow-x-auto">{{ JSON.stringify(log.response, null, 2) }}</pre>
+        <div class="text-[11px] bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 text-slate-300">
+          <span class="text-slate-500 block text-[10px] mb-1 font-semibold">响应 JSON Response:</span>
+          <pre class="overflow-x-auto text-emerald-400 max-h-36 overflow-y-auto leading-tight">{{
+            JSON.stringify(log.response, null, 2)
+          }}</pre>
         </div>
       </div>
     </div>
