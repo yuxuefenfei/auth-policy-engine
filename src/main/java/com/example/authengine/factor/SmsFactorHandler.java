@@ -37,10 +37,10 @@ public class SmsFactorHandler implements FactorHandler {
     }
 
     /**
-     * 生成一次性 6 位短信动态验证码挑战
+     * 生成一次性 6 位短信动态验证码凭据
      *
      * @param attempt 当前登录会话
-     * @return 包含密文哈希及 120s TTL 的挑战凭据包
+     * @return 包含密文哈希及 120s TTL 的动态验证凭据包
      */
     @Override
     public PreparedChallenge prepare(LoginAttempt attempt) {
@@ -57,7 +57,7 @@ public class SmsFactorHandler implements FactorHandler {
      * 安全设计：即使用户不存在也返回相同动作结构，彻底防御基于发送接口的账号枚举嗅探。
      *
      * @param attempt   当前登录流程
-     * @param challenge 已就绪的挑战凭据
+     * @param challenge 已就绪的动态验证凭据
      */
     @Override
     public void deliver(LoginAttempt attempt, PreparedChallenge challenge) {

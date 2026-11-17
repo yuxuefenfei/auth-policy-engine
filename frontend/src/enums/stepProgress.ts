@@ -6,7 +6,7 @@ export enum StepProgress {
   PENDING = 'PENDING',
   /** 可验证：当前拓扑分支已开放，用户可执行 */
   READY = 'READY',
-  /** 待核验：挑战已生成 (短信已发/二维码已展)，等待输入或确认 */
+  /** 待核验：动态验证凭据已下发 (短信已发/二维码已展)，等待输入或扫码确认 */
   CHALLENGE_ISSUED = 'CHALLENGE_ISSUED',
   /** 已验证：本因子凭据比对通过 */
   VERIFIED = 'VERIFIED',
@@ -36,9 +36,9 @@ export const STEP_PROGRESS_META: Record<StepProgress, StepProgressMeta> = {
   },
   [StepProgress.CHALLENGE_ISSUED]: {
     code: StepProgress.CHALLENGE_ISSUED,
-    label: '待核验 CHALLENGED',
+    label: '待核验 (凭据已发)',
     badgeClass: 'bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse',
-    description: '挑战凭据已下发，等待提交或扫码',
+    description: '动态验证凭据已下发，等待提交或扫码确认',
   },
   [StepProgress.VERIFIED]: {
     code: StepProgress.VERIFIED,

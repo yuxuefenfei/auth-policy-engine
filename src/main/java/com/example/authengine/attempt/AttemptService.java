@@ -27,7 +27,7 @@ import java.util.Map;
  * 动态登录认证状态机会话服务
  * <p>
  * 职责：
- * 1. 管理登录 Attempt 全生命周期流转 (创建、因子开放决策、挑战下发、凭据核验、原子核销)；
+ * 1. 管理登录 Attempt 全生命周期流转 (创建、因子开放决策、动态核验凭据下发、凭据核验、原子核销)；
  * 2. 状态机每次变更严格采用 CAS 乐观版本锁 (revision)，杜绝多端并发竞争与重放攻击；
  * 3. 会话创建时一次性捕获策略 AST 不可变快照，整个生命周期内不受后续策略版本发布影响；
  * 4. 强制校验浏览器绑定的 {@code AUTH_BIND} 指纹 Cookie，防御跨站/跨设备盗用。
@@ -95,7 +95,7 @@ public class AttemptService {
     }
 
     /**
-     * 发起指定因子的挑战 (如发送短信验证码或生成动态二维码)
+     * 发起指定因子的动态核验流程 (如发送短信验证码或生成动态二维码)
      * <p>
      * 只有成功执行 CAS 递增版本的请求才能执行短信发送或二维码落地，避免高并发冲突时下发无效凭据。
      *
@@ -111,14 +111,14 @@ public class AttemptService {
             FactorStep step = requireEligible(attempt, nodeId);
 
             if (step.getType() == FactorType.PASSWORD) {
-                throw ApiException.bad("密码认证无需发起挑战生成");
+                throw ApiException.bad("密码认证无需预先发起动态验证，请直接提交密码核验");
             }
 
             FactorHandler handler = factorRegistry.require(step.getType());
             Instant now = Instant.now();
 
             if (step.getChallengeSends() >= authProperties.getMaxChallengeSends()) {
-                throw ApiException.forbidden("挑战凭据发送次数已达上限");
+                throw ApiException.forbidden("动态验证凭据发送次数已达上限，请稍后重试");
             }
             if (step.getLastChallengeAt() != null &&
                     step.getLastChallengeAt().plusSeconds(authProperties.getChallengeCooldownSeconds()).isAfter(now)) {
@@ -143,7 +143,7 @@ public class AttemptService {
     /**
      * 提交指定因子的核验凭据 (如密码或短信验证码)
      * <p>
-     * 核验成功后标记节点为 VERIFIED 并销毁对应挑战凭据，失败则增加错误计数并在达到阈值后锁定节点。
+     * 核验成功后标记节点为 VERIFIED 并销毁对应动态凭据，失败则增加错误计数并在达到阈值后锁定节点。
      * 每次核验后立即驱动 AST 求值引擎重新计算整树达成状态。
      *
      * @param id             Attempt 会话 ID

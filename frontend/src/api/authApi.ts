@@ -24,7 +24,7 @@ export function getAttemptStatus(id: string): Promise<AttemptView> {
 }
 
 /**
- * 向指定因子节点发起挑战 (如发送短信验证码或生成动态二维码)
+ * 向指定因子节点发起动态验证流程 (如发送短信验证码或生成动态二维码)
  *
  * @param id Attempt 标识
  * @param nodeId 待发起的节点 ID

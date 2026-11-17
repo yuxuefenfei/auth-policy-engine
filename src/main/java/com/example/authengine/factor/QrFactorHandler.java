@@ -28,7 +28,7 @@ public class QrFactorHandler implements FactorHandler {
      * 生成带时效的动态扫码票据
      *
      * @param attempt 当前登录会话
-     * @return 包含 Ticket 明文 (用于渲染二维码) 及密文 SHA-256 摘要的挑战凭据包 (90s TTL)
+     * @return 包含 Ticket 明文 (用于渲染二维码) 及密文 SHA-256 摘要的动态核验凭据包 (90s TTL)
      */
     @Override
     public PreparedChallenge prepare(LoginAttempt attempt) {

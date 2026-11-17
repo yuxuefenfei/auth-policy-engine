@@ -20,7 +20,7 @@ import java.time.Duration;
 /**
  * 登录认证流程控制器
  * <p>
- * 负责动态认证 Attempt 的创建、状态轮询、挑战发起及凭据核验。
+ * 负责动态认证 Attempt 的创建、状态轮询、动态核验凭据下发（短信验证码/扫码票据）及凭据核验。
  * 遵循 HTTP 边界适配原则，保证无状态请求与浏览器绑定的原子性。
  */
 @RestController
@@ -74,12 +74,12 @@ public class LoginAttemptController {
     }
 
     /**
-     * 针对指定因子节点发起挑战 (如发送短信验证码或生成动态二维码)
+     * 针对指定因子节点发起动态核验 (如发送短信验证码或生成动态二维码)
      *
      * @param id     Attempt 标识
      * @param nodeId 待执行的因子节点 ID
      * @param bind   浏览器绑定 Cookie
-     * @return 挑战结果与更新后的 Attempt 视图
+     * @return 动态核验凭据结果与更新后的 Attempt 视图
      */
     @PostMapping("/{id}/factors/{nodeId}/start")
     public StartFactorResponse start(@PathVariable String id,

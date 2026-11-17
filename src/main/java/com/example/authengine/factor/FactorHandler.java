@@ -17,7 +17,7 @@ public interface FactorHandler {
     }
 
     default PreparedChallenge prepare(LoginAttempt attempt) {
-        throw new UnsupportedOperationException("该认证器无需发起挑战");
+        throw new UnsupportedOperationException("该认证因子无需预先下发动态验证凭据（直接校验凭据即可）");
     }
 
     default void deliver(LoginAttempt attempt, PreparedChallenge challenge) {
@@ -26,7 +26,9 @@ public interface FactorHandler {
     boolean verify(LoginAttempt attempt, FactorStep step, String credential);
 
     /**
-     * secretHash 存入 Redis；deliverySecret 仅供发送通道使用，不能持久化或返回给浏览器。
+     * 预先生成的动态核验凭据包（如短信动态验证码哈希、扫码授权票据等）
+     * <p>
+     * 安全设计：secretHash 存入 Redis/持久层；deliverySecret 仅供外部发送通道使用，绝不返回前端。
      */
     record PreparedChallenge(String secretHash, Instant expiresAt,
                              String deliverySecret, String displayTicket) {

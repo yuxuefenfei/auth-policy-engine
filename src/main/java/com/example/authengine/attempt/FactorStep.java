@@ -9,7 +9,7 @@ import lombok.Setter;
 import java.time.Instant;
 
 /**
- * 单个 AST 叶子节点的挑战和尝试记录，不存储任何明文凭据。
+ * 单个 AST 叶子节点的动态凭据下发与核验尝试记录，不存储任何明文凭据。
  */
 @Getter
 @Setter
