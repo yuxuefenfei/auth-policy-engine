@@ -7,6 +7,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -30,6 +33,27 @@ public class ApiExceptionHandler {
     public ResponseEntity<Map<String, String>> invalid(Exception ex) {
         log.warn("客户端请求参数不合法: {}", ex.getMessage());
         return ResponseEntity.badRequest().body(Map.of("error", "请求参数不合法"));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<Map<String, String>> mediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        log.warn("不支持的媒体类型 Content-Type: {}", ex.getContentType());
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(Map.of("error", "请求头 Content-Type 不受支持: " + ex.getContentType() + "，请使用 application/json 或 text/plain"));
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<Map<String, String>> mediaTypeNotAcceptable(HttpMediaTypeNotAcceptableException ex) {
+        log.warn("无法满足的客户端 Accept 媒体类型: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
+                .body(Map.of("error", "无法满足客户端 Accept 媒体类型"));
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, String>> methodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        log.warn("不支持的 HTTP 请求方法: {}", ex.getMethod());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(Map.of("error", "不支持的请求方法: " + ex.getMethod()));
     }
 
     @ExceptionHandler(AuthenticationException.class)

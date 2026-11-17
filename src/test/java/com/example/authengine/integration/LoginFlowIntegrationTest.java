@@ -185,6 +185,31 @@ class LoginFlowIntegrationTest {
                         .content("{\"ticket\":\"_pF8vJea3KAcBoLthGgcCohdzLXf594P.Se-qXDly9a0o9FNm-31YU-BZ_uW1ZQJDPQzRz6TmGGY\", \"approvedBy\":\"alice\"}"))
                 .andExpect(status().isNotFound()) // ticket 不存在因此预期返回 404 而不是 500
                 .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
+
+        // 8. 测试 text/plain 媒体类型直接传入 JSON 字符串 (兼容 Postman text 格式)
+        System.out.println("--- Test 6: text/plain with JSON body ---");
+        mvc.perform(post("/api/app/qr/approve")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("{\"ticket\":\"_pF8vJea3KAcBoLthGgcCohdzLXf594P.Se-qXDly9a0o9FNm-31YU-BZ_uW1ZQJDPQzRz6TmGGY\", \"approvedBy\":\"alice\"}"))
+                .andExpect(status().isNotFound())
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
+
+        // 9. 测试 text/plain 直接传入纯文本 Ticket 密文 (无 JSON 包装)
+        System.out.println("--- Test 7: text/plain raw ticket string ---");
+        mvc.perform(post("/api/app/qr/approve")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .param("approvedBy", "alice")
+                        .content("_pF8vJea3KAcBoLthGgcCohdzLXf594P.Se-qXDly9a0o9FNm-31YU-BZ_uW1ZQJDPQzRz6TmGGY"))
+                .andExpect(status().isNotFound())
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
+
+        // 10. 测试仅通过 Query 参数调用
+        System.out.println("--- Test 8: Query params only ---");
+        mvc.perform(post("/api/app/qr/approve")
+                        .param("ticket", "_pF8vJea3KAcBoLthGgcCohdzLXf594P.Se-qXDly9a0o9FNm-31YU-BZ_uW1ZQJDPQzRz6TmGGY")
+                        .param("approvedBy", "alice"))
+                .andExpect(status().isNotFound())
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
     }
 
     private record Started(String id, String cookie, int policyVersion) {
