@@ -2,13 +2,21 @@
 import { ref, computed, onMounted } from 'vue';
 import {
   createAttempt,
-  getAttempt,
-  completeAttempt,
+  getAttemptStatus,
+  completeLogin,
   getMe,
   getActivePolicy,
   apiLogs,
-} from './api/auth';
-import type { AttemptView, PolicySnapshot, SessionToken, PolicyNode } from './types/auth';
+} from './api';
+import {
+  type AttemptView,
+  type PolicySnapshot,
+  type SessionToken,
+  type PolicyNode,
+  AttemptStatus,
+  ATTEMPT_STATUS_META,
+  FactorType,
+} from './types/auth';
 import PolicyNodeViewer from './components/PolicyNodeViewer.vue';
 import FactorPassword from './components/FactorPassword.vue';
 import FactorSms from './components/FactorSms.vue';
@@ -410,15 +418,9 @@ onMounted(loadActive);
                   <span class="text-slate-500">流程会话状态:</span>
                   <span
                     class="font-bold px-2 py-0.5 rounded text-[11px] border"
-                    :class="[
-                      currentAttempt.status === 'SUCCEEDED'
-                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                        : currentAttempt.status === 'CONSUMED'
-                        ? 'bg-purple-500/20 text-purple-300 border-purple-500/30'
-                        : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
-                    ]"
+                    :class="ATTEMPT_STATUS_META[currentAttempt.status]?.badgeClass || 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'"
                   >
-                    {{ currentAttempt.status }}
+                    {{ ATTEMPT_STATUS_META[currentAttempt.status]?.label || currentAttempt.status }}
                   </span>
                 </div>
                 <div class="flex justify-between items-center">

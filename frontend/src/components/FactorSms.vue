@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onUnmounted } from 'vue';
-import { startFactor, verifyFactor, getLatestDemoSms } from '../api/auth';
-import type { AttemptView, StepProgress } from '../types/auth';
+import { startFactor, verifyFactor, getLatestConsoleSms } from '../api';
+import type { AttemptView } from '../types/auth';
+import type { StepProgress } from '../enums';
 
 const props = defineProps<{
   attempt: AttemptView;
@@ -58,7 +59,7 @@ async function handleVerify() {
 async function fetchConsoleCode() {
   try {
     const mobile = props.username === 'admin' ? '13900000000' : '13800000000';
-    const data = await getLatestDemoSms(mobile);
+    const data = await getLatestConsoleSms(mobile);
     if (data.code) {
       detectedConsoleSms.value = data.code;
     }

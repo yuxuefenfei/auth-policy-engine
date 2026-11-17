@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onUnmounted, nextTick } from 'vue';
-import { startFactor, getAttempt, approveQr } from '../api/auth';
-import type { AttemptView, StepProgress } from '../types/auth';
+import { startFactor, getAttemptStatus, approveQrTicket } from '../api';
+import type { AttemptView } from '../types/auth';
+import type { StepProgress } from '../enums';
 
 const props = defineProps<{
   attempt: AttemptView;
@@ -64,7 +65,7 @@ function startPolling() {
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(async () => {
     try {
-      const updated = await getAttempt(props.attempt.attemptId);
+      const updated = await getAttemptStatus(props.attempt.attemptId);
       emit('updated', updated);
       if (updated.progress[props.nodeId] === 'VERIFIED') {
         clearInterval(pollTimer);
@@ -81,7 +82,7 @@ async function simulateAppApprove() {
   errorMessage.value = '';
   try {
     const pwd = props.username === 'admin' ? 'Admin@123456' : 'Demo@123456';
-    const res = await approveQr(qrTicket.value, props.username, pwd);
+    const res = await approveQrTicket(qrTicket.value, props.username, pwd);
     emit('updated', res);
     if (pollTimer) clearInterval(pollTimer);
   } catch (err: any) {

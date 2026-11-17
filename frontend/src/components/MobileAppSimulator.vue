@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { approveQr } from '../api/auth';
+import { approveQrTicket } from '../api';
 import type { AttemptView } from '../types/auth';
 
 const emit = defineEmits<{
@@ -18,7 +18,7 @@ async function handleApprove() {
   result.value = null;
   try {
     const pwd = appUser.value === 'admin' ? 'Admin@123456' : 'Demo@123456';
-    const res = await approveQr(ticket.value.trim(), appUser.value, pwd);
+    const res = await approveQrTicket(ticket.value.trim(), appUser.value, pwd);
     result.value = {
       success: true,
       title: '✅ 扫码授权确认成功',

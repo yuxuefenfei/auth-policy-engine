@@ -1,6 +1,9 @@
-export type FactorType = 'PASSWORD' | 'SMS_OTP' | 'APP_QR_APPROVAL' | 'PASSKEY';
+import type { FactorType } from '../enums/factorType';
+import type { PolicyOp } from '../enums/policyOp';
+import type { AttemptStatus } from '../enums/attemptStatus';
+import type { StepProgress } from '../enums/stepProgress';
 
-export type PolicyOp = 'FACTOR' | 'ALL' | 'ANY' | 'AT_LEAST' | 'SEQUENCE';
+export * from '../enums';
 
 export interface PolicyNode {
   op: PolicyOp;
@@ -9,10 +12,6 @@ export interface PolicyNode {
   required?: number;
   children?: PolicyNode[];
 }
-
-export type AttemptStatus = 'IN_PROGRESS' | 'SUCCEEDED' | 'FAILED' | 'CONSUMED';
-
-export type StepProgress = 'PENDING' | 'CHALLENGE_ISSUED' | 'VERIFIED' | 'EXHAUSTED';
 
 export interface FactorOption {
   nodeId: string;
@@ -43,8 +42,8 @@ export interface VerifyResult {
 
 export interface SessionToken {
   accessToken: string;
-  expiresAt: string;
   tokenType: string;
+  expiresIn: number;
 }
 
 export interface PolicySnapshot {
@@ -55,9 +54,9 @@ export interface PolicySnapshot {
 
 export interface VersionInfo {
   version: number;
-  active: boolean;
-  root: PolicyNode;
-  createdAt: string;
+  status: string;
+  checksum: string;
+  publishedAt?: string | null;
 }
 
 export interface ApiLogEntry {

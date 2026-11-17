@@ -4,9 +4,7 @@ spring:
     username: ${MYSQL_USER:auth}
     password: ${MYSQL_PASSWORD:?MYSQL_PASSWORD_NOT_SET}
     driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    hibernate:
-      ddl-auto: validate # 首次建表需使用迁移工具或另行初始化。不要在生产环境使用 update。
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}

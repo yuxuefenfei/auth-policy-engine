@@ -10,13 +10,14 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password: ''
-  jpa:
-    open-in-view: false
-    hibernate:
-      ddl-auto: update # 仅供示例。生产环境改为 Flyway/Liquibase
-    properties:
-      hibernate:
-        format_sql: false
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+  mybatis-flex:
+    configuration:
+      log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+      map-underscore-to-camel-case: true
   jackson:
     serialization:
       write-dates-as-timestamps: false

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getActivePolicy, getPolicyVersions, savePolicyDraft, publishPolicy } from '../api/auth';
+import { getActivePolicy, listPolicyVersions, saveDraftPolicy, publishPolicy } from '../api';
 import type { PolicySnapshot, VersionInfo, PolicyNode } from '../types/auth';
 
 const activePolicy = ref<PolicySnapshot | null>(null);
@@ -146,7 +146,7 @@ async function loadData() {
     if (!policyEditorText.value) {
       policyEditorText.value = JSON.stringify(active.root, null, 2);
     }
-    const versions = await getPolicyVersions();
+    const versions = await listPolicyVersions();
     policyVersions.value = versions;
   } catch (err) {
     console.error('加载策略失败', err);
@@ -178,7 +178,7 @@ async function handleSaveDraft() {
   try {
     const ast: PolicyNode = JSON.parse(policyEditorText.value);
     loadingDraft.value = true;
-    const res = await savePolicyDraft('WEB_LOGIN', ast);
+    const res = await saveDraftPolicy('WEB_LOGIN', ast);
     alert(`成功保存为草稿版本: Version ${res.version}`);
     await loadData();
   } catch (err: any) {
@@ -192,7 +192,7 @@ async function handleSaveAndPublish() {
   try {
     const ast: PolicyNode = JSON.parse(policyEditorText.value);
     loadingPublish.value = true;
-    const draft = await savePolicyDraft('WEB_LOGIN', ast);
+    const draft = await saveDraftPolicy('WEB_LOGIN', ast);
     const pub = await publishPolicy('WEB_LOGIN', draft.version);
     alert(`成功发布策略！当前生效版本已切换至: Version ${pub.version}`);
     await loadData();

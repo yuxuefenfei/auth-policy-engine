@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import type { PolicyNode, StepProgress, FactorOption } from '../types/auth';
+import {
+  type PolicyNode,
+  type FactorOption,
+  StepProgress,
+  FactorType,
+  PolicyOp,
+  FACTOR_TYPE_META,
+  POLICY_OP_META,
+  STEP_PROGRESS_META,
+} from '../types/auth';
 
 const props = defineProps<{
   node: PolicyNode | null;
@@ -9,33 +18,20 @@ const props = defineProps<{
 }>();
 
 function factorDetails(factor?: string) {
-  switch (factor) {
-    case 'PASSWORD':
-      return { name: '密码认证 (BCrypt)', icon: '🔑', color: 'indigo', desc: '密码单向哈希安全核验' };
-    case 'SMS_OTP':
-      return { name: '短信验证码 (OTP)', icon: '💬', color: 'amber', desc: '时效性一次性动态短信码' };
-    case 'APP_QR_APPROVAL':
-      return { name: 'APP 扫码授权 (QR)', icon: '📲', color: 'purple', desc: '移动端安全令扫码授权' };
-    case 'PASSKEY':
-      return { name: '通行密钥 (Passkey)', icon: '🛡️', color: 'rose', desc: 'WebAuthn 生物特征与硬件公钥' };
-    default:
-      return { name: '扩展认证方式', icon: '⚙️', color: 'slate', desc: '自定义扩展认证项' };
+  if (factor && factor in FACTOR_TYPE_META) {
+    const meta = FACTOR_TYPE_META[factor as FactorType];
+    return { name: `${meta.name} (${meta.badge})`, icon: meta.icon, color: meta.color, desc: meta.description };
   }
+  return { name: '扩展认证方式', icon: '⚙️', color: 'slate', desc: '自定义扩展认证项' };
 }
 
 function opDetails(op: string) {
-  switch (op) {
-    case 'ALL':
-      return { label: 'ALL 全部满足 (全与)', color: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30', desc: '必须满足全部子条件' };
-    case 'ANY':
-      return { label: 'ANY 任选其一 (短路)', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30', desc: '任意一项达成即可快速通过' };
-    case 'AT_LEAST':
-      return { label: 'AT_LEAST 阈值要求', color: 'bg-blue-500/10 text-blue-400 border-blue-500/30', desc: `至少满足其中 ${props.node?.required || 2} 项认证` };
-    case 'SEQUENCE':
-      return { label: 'SEQUENCE 顺序认证', color: 'bg-amber-500/10 text-amber-400 border-amber-500/30', desc: '必须按固定前后顺序依次完成' };
-    default:
-      return { label: op, color: 'bg-slate-500/10 text-slate-400 border-slate-500/30', desc: '' };
+  if (op && op in POLICY_OP_META) {
+    const meta = POLICY_OP_META[op as PolicyOp];
+    const desc = op === PolicyOp.AT_LEAST ? `至少满足其中 ${props.node?.required || 2} 项认证` : meta.description;
+    return { label: meta.label, color: meta.badgeClass, desc };
   }
+  return { label: op, color: 'bg-slate-500/10 text-slate-400 border-slate-500/30', desc: '' };
 }
 
 function isAvailable(nodeId: string) {
@@ -43,19 +39,16 @@ function isAvailable(nodeId: string) {
 }
 
 function statusBadge(status?: StepProgress, available?: boolean) {
-  if (status === 'VERIFIED') {
-    return { text: '已验证 VERIFIED', class: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 ring-1 ring-emerald-500/20' };
-  }
-  if (status === 'CHALLENGE_ISSUED') {
-    return { text: '待核验 CHALLENGED', class: 'bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse' };
-  }
-  if (status === 'EXHAUSTED') {
-    return { text: '次数超限 EXHAUSTED', class: 'bg-rose-500/20 text-rose-400 border-rose-500/30' };
+  if (status && status in STEP_PROGRESS_META) {
+    const meta = STEP_PROGRESS_META[status];
+    return { text: meta.label, class: meta.badgeClass };
   }
   if (available) {
-    return { text: '待验证 READY', class: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40 ring-1 ring-indigo-500/30' };
+    const meta = STEP_PROGRESS_META[StepProgress.READY];
+    return { text: meta.label, class: meta.badgeClass };
   }
-  return { text: '等待前置 PENDING', class: 'bg-slate-800 text-slate-400 border-slate-700' };
+  const defaultMeta = STEP_PROGRESS_META[StepProgress.PENDING];
+  return { text: defaultMeta.label, class: defaultMeta.badgeClass };
 }
 </script>
 
