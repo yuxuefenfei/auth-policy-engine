@@ -41,7 +41,8 @@ public class SecurityConfig {
      */
     @Bean
     @Order(1)
-    public SecurityFilterChain privilegedChain(HttpSecurity http, AuthenticationManager manager)
+    public SecurityFilterChain privilegedChain(HttpSecurity http, AuthenticationManager manager,
+                                               SessionTokenService tokens, UserDetailsService users)
             throws Exception {
         http.securityMatcher("/api/admin/**", "/api/app/**")
                 .cors(Customizer.withDefaults())
@@ -52,8 +53,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/app/qr/approve").permitAll()
                         .requestMatchers("/api/app/**").hasAnyRole("USER", "ADMIN")
-                        .anyRequest().denyAll());
+                        .anyRequest().denyAll())
+                .addFilterBefore(new BearerSessionFilter(tokens, users), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

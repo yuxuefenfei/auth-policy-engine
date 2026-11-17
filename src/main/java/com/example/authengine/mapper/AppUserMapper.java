@@ -27,7 +27,7 @@ public interface AppUserMapper extends BaseMapper<AppUser> {
         }
         QueryWrapper query = QueryWrapper.create()
                 .from(AppUser.class)
-                .where("username = ?", username.trim());
+                .eq(AppUser::getUsername, username.trim());
         return Optional.ofNullable(selectOneByQuery(query));
     }
 }

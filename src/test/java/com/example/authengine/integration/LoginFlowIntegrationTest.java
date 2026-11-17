@@ -116,6 +116,77 @@ class LoginFlowIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    @Test
+    void testQrApproveWithMockTicket() throws Exception {
+        // 1. 创建真实 attempt
+        MockHttpServletResponse startRes = mvc.perform(post("/api/login/attempts")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"username\":\"alice\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        JsonNode startNode = json.readTree(startRes.getContentAsString());
+        String attemptId = startNode.get("attemptId").asText();
+        String cookie = startRes.getHeader("Set-Cookie").split(";")[0].split("=", 2)[1];
+
+        // 2. 启动 qr 因子
+        MockHttpServletResponse qrRes = mvc.perform(post("/api/login/attempts/{id}/factors/qr/start", attemptId)
+                        .cookie(new Cookie("AUTH_BIND", cookie)))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        String realTicket = json.readTree(qrRes.getContentAsString()).get("qrTicket").asText();
+        System.out.println("Generated realTicket: " + realTicket);
+
+        // 3. 测试使用 alice (正确用户) approve realTicket
+        System.out.println("--- Test 1: Real ticket with alice ---");
+        mvc.perform(post("/api/app/qr/approve")
+                        .with(httpBasic("alice", "Demo@123456"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ticket\":\"" + realTicket + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("SUCCEEDED"))
+                .andExpect(jsonPath("$.canComplete").value(true));
+
+        // 4. 测试再次提交同一个 realTicket (防重放 / 已失效)
+        System.out.println("--- Test 2: Real ticket replay ---");
+        mvc.perform(post("/api/app/qr/approve")
+                        .with(httpBasic("alice", "Demo@123456"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ticket\":\"" + realTicket + "\"}"))
+                .andExpect(status().isForbidden());
+
+        // 5. 测试使用 admin approve alice 的 realTicket
+        // 重新为一个新的 attempt 发起 qr
+        MockHttpServletResponse startRes2 = mvc.perform(post("/api/login/attempts")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"username\":\"alice\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        String attemptId2 = json.readTree(startRes2.getContentAsString()).get("attemptId").asText();
+        String cookie2 = startRes2.getHeader("Set-Cookie").split(";")[0].split("=", 2)[1];
+        MockHttpServletResponse qrRes2 = mvc.perform(post("/api/login/attempts/{id}/factors/qr/start", attemptId2)
+                        .cookie(new Cookie("AUTH_BIND", cookie2)))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        String realTicket2 = json.readTree(qrRes2.getContentAsString()).get("qrTicket").asText();
+
+        System.out.println("--- Test 3: admin approve alice ticket ---");
+        mvc.perform(post("/api/app/qr/approve")
+                        .with(httpBasic("admin", "Admin@123456"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ticket\":\"" + realTicket2 + "\"}"))
+                .andExpect(status().isForbidden());
+
+        // 6. 测试无认证且未传 approvedBy 时调用
+        System.out.println("--- Test 4: Without auth or approvedBy ---");
+        mvc.perform(post("/api/app/qr/approve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ticket\":\"_pF8vJea3KAcBoLthGgcCohdzLXf594P.Se-qXDly9a0o9FNm-31YU-BZ_uW1ZQJDPQzRz6TmGGY\"}"))
+                .andExpect(status().isUnauthorized())
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
+
+        // 7. 测试未传 Basic Auth 但在请求体传入 approvedBy 备选参数
+        System.out.println("--- Test 5: With approvedBy body param ---");
+        mvc.perform(post("/api/app/qr/approve")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"ticket\":\"_pF8vJea3KAcBoLthGgcCohdzLXf594P.Se-qXDly9a0o9FNm-31YU-BZ_uW1ZQJDPQzRz6TmGGY\", \"approvedBy\":\"alice\"}"))
+                .andExpect(status().isNotFound()) // ticket 不存在因此预期返回 404 而不是 500
+                .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
+    }
+
     private record Started(String id, String cookie, int policyVersion) {
     }
 }

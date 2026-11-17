@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,7 +31,20 @@ public class LoginAttempt {
     private long revision;
     private Map<String, FactorStep> steps = new LinkedHashMap<>();
 
+    public Map<String, FactorStep> getSteps() {
+        if (steps == null) {
+            steps = new LinkedHashMap<>();
+        }
+        return steps;
+    }
+
     public PolicyEvaluator.Decision decision() {
-        return PolicyEvaluator.evaluate(root, nodeId -> steps.get(nodeId).leafState());
+        if (root == null) {
+            return new PolicyEvaluator.Decision(PolicyEvaluator.Status.PENDING, List.of());
+        }
+        return PolicyEvaluator.evaluate(root, nodeId -> {
+            FactorStep step = steps != null ? steps.get(nodeId) : null;
+            return step != null ? step.leafState() : PolicyEvaluator.LeafState.PENDING;
+        });
     }
 }

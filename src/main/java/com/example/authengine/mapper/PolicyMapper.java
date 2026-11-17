@@ -27,7 +27,7 @@ public interface PolicyMapper extends BaseMapper<PolicyEntity> {
         }
         QueryWrapper query = QueryWrapper.create()
                 .from(PolicyEntity.class)
-                .where("policy_code = ?", code);
+                .eq(PolicyEntity::getPolicyCode, code);
         return Optional.ofNullable(selectOneByQuery(query));
     }
 
@@ -43,7 +43,7 @@ public interface PolicyMapper extends BaseMapper<PolicyEntity> {
         }
         QueryWrapper query = QueryWrapper.create()
                 .from(PolicyEntity.class)
-                .where("policy_code = ?", code)
+                .eq(PolicyEntity::getPolicyCode, code)
                 .forUpdate();
         return Optional.ofNullable(selectOneByQuery(query));
     }

@@ -26,8 +26,8 @@ public interface PolicyVersionMapper extends BaseMapper<PolicyVersionEntity> {
     default Optional<PolicyVersionEntity> findByPolicyCodeAndVersionNumber(String code, int version) {
         QueryWrapper query = QueryWrapper.create()
                 .from(PolicyVersionEntity.class)
-                .where("policy_code = ?", code)
-                .and("version_number = ?", version);
+                .eq(PolicyVersionEntity::getPolicyCode, code)
+                .eq(PolicyVersionEntity::getVersionNumber, version);
         return Optional.ofNullable(selectOneByQuery(query));
     }
 

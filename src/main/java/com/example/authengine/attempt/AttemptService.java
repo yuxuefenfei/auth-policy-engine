@@ -11,6 +11,7 @@ import com.example.authengine.dto.response.FactorOptionResponse;
 import com.example.authengine.dto.response.PolicySnapshotResponse;
 import com.example.authengine.dto.response.StartFactorResponse;
 import com.example.authengine.dto.response.VerifyFactorResponse;
+import com.example.authengine.entity.AppUser;
 import com.example.authengine.factor.FactorHandler;
 import com.example.authengine.factor.FactorRegistry;
 import com.example.authengine.mapper.AppUserMapper;
@@ -61,8 +62,8 @@ public class AttemptService {
         attempt.setId(SecureValues.randomToken(24));
         attempt.setUsername(username.trim());
         attempt.setSubjectUserId(appUserMapper.findByUsername(username.trim())
-                .filter(u -> u.isEnabled())
-                .map(u -> u.getId())
+                .filter(AppUser::isEnabled)
+                .map(AppUser::getId)
                 .orElse(null));
         attempt.setBindingHash(SecureValues.sha256(browserBinding));
         attempt.setPolicyCode(policy.code());
@@ -315,7 +316,11 @@ public class AttemptService {
 
     private AttemptResponse toAttemptResponse(LoginAttempt attempt) {
         List<FactorOptionResponse> available = attempt.decision().availableNodes().stream()
-                .map(id -> new FactorOptionResponse(id, attempt.getSteps().get(id).getType()))
+                .map(id -> {
+                    FactorStep step = attempt.getSteps().get(id);
+                    FactorType type = step != null ? step.getType() : FactorType.PASSWORD;
+                    return new FactorOptionResponse(id, type);
+                })
                 .toList();
 
         Map<String, String> progress = new LinkedHashMap<>();
