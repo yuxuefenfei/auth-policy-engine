@@ -13,6 +13,7 @@ public record ApproveQrRequest(
         String ticket,
         String approvedBy
 ) {
+    @SuppressWarnings("unused")
     public ApproveQrRequest(String ticket) {
         this(ticket, null);
     }

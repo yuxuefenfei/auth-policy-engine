@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -45,12 +46,18 @@ class LoginFlowIntegrationTest {
         return new PolicyNode(PolicyNode.Op.ALL, null, null, null, List.of(children));
     }
 
+    private String extractCookie(MockHttpServletResponse response) {
+        String setCookie = response.getHeader("Set-Cookie");
+        assertNotNull(setCookie);
+        return setCookie.split(";")[0].split("=", 2)[1];
+    }
+
     private Started start() throws Exception {
         MockHttpServletResponse response = mvc.perform(post("/api/login/attempts")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"username\":\"alice\"}"))
                 .andExpect(status().isOk()).andReturn().getResponse();
         JsonNode state = json.readTree(response.getContentAsString());
-        String cookie = response.getHeader("Set-Cookie").split(";")[0].split("=", 2)[1];
+        String cookie = extractCookie(response);
         return new Started(state.get("attemptId").asText(), cookie, state.get("policyVersion").asInt());
     }
 
@@ -124,17 +131,15 @@ class LoginFlowIntegrationTest {
                 .andExpect(status().isOk()).andReturn().getResponse();
         JsonNode startNode = json.readTree(startRes.getContentAsString());
         String attemptId = startNode.get("attemptId").asText();
-        String cookie = startRes.getHeader("Set-Cookie").split(";")[0].split("=", 2)[1];
+        String cookie = extractCookie(startRes);
 
         // 2. 启动 qr 因子
         MockHttpServletResponse qrRes = mvc.perform(post("/api/login/attempts/{id}/factors/qr/start", attemptId)
                         .cookie(new Cookie("AUTH_BIND", cookie)))
                 .andExpect(status().isOk()).andReturn().getResponse();
         String realTicket = json.readTree(qrRes.getContentAsString()).get("qrTicket").asText();
-        System.out.println("Generated realTicket: " + realTicket);
 
         // 3. 测试使用 alice (正确用户) approve realTicket
-        System.out.println("--- Test 1: Real ticket with alice ---");
         mvc.perform(post("/api/app/qr/approve")
                         .with(httpBasic("alice", "Demo@123456"))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -144,7 +149,6 @@ class LoginFlowIntegrationTest {
                 .andExpect(jsonPath("$.canComplete").value(true));
 
         // 4. 测试再次提交同一个 realTicket (防重放 / 已失效)
-        System.out.println("--- Test 2: Real ticket replay ---");
         mvc.perform(post("/api/app/qr/approve")
                         .with(httpBasic("alice", "Demo@123456"))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -157,13 +161,12 @@ class LoginFlowIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"username\":\"alice\"}"))
                 .andExpect(status().isOk()).andReturn().getResponse();
         String attemptId2 = json.readTree(startRes2.getContentAsString()).get("attemptId").asText();
-        String cookie2 = startRes2.getHeader("Set-Cookie").split(";")[0].split("=", 2)[1];
+        String cookie2 = extractCookie(startRes2);
         MockHttpServletResponse qrRes2 = mvc.perform(post("/api/login/attempts/{id}/factors/qr/start", attemptId2)
                         .cookie(new Cookie("AUTH_BIND", cookie2)))
                 .andExpect(status().isOk()).andReturn().getResponse();
         String realTicket2 = json.readTree(qrRes2.getContentAsString()).get("qrTicket").asText();
 
-        System.out.println("--- Test 3: admin approve alice ticket ---");
         mvc.perform(post("/api/app/qr/approve")
                         .with(httpBasic("admin", "Admin@123456"))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -171,7 +174,6 @@ class LoginFlowIntegrationTest {
                 .andExpect(status().isForbidden());
 
         // 6. 测试无认证且未传 approvedBy 时调用
-        System.out.println("--- Test 4: Without auth or approvedBy ---");
         mvc.perform(post("/api/app/qr/approve")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"ticket\":\"_pF8vJea3KAcBoLthGgcCohdzLXf594P.Se-qXDly9a0o9FNm-31YU-BZ_uW1ZQJDPQzRz6TmGGY\"}"))
@@ -179,7 +181,6 @@ class LoginFlowIntegrationTest {
                 .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
 
         // 7. 测试未传 Basic Auth 但在请求体传入 approvedBy 备选参数
-        System.out.println("--- Test 5: With approvedBy body param ---");
         mvc.perform(post("/api/app/qr/approve")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"ticket\":\"_pF8vJea3KAcBoLthGgcCohdzLXf594P.Se-qXDly9a0o9FNm-31YU-BZ_uW1ZQJDPQzRz6TmGGY\", \"approvedBy\":\"alice\"}"))
@@ -187,7 +188,6 @@ class LoginFlowIntegrationTest {
                 .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
 
         // 8. 测试 text/plain 媒体类型直接传入 JSON 字符串 (兼容 Postman text 格式)
-        System.out.println("--- Test 6: text/plain with JSON body ---");
         mvc.perform(post("/api/app/qr/approve")
                         .contentType(MediaType.TEXT_PLAIN)
                         .content("{\"ticket\":\"_pF8vJea3KAcBoLthGgcCohdzLXf594P.Se-qXDly9a0o9FNm-31YU-BZ_uW1ZQJDPQzRz6TmGGY\", \"approvedBy\":\"alice\"}"))
@@ -195,7 +195,6 @@ class LoginFlowIntegrationTest {
                 .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
 
         // 9. 测试 text/plain 直接传入纯文本 Ticket 密文 (无 JSON 包装)
-        System.out.println("--- Test 7: text/plain raw ticket string ---");
         mvc.perform(post("/api/app/qr/approve")
                         .contentType(MediaType.TEXT_PLAIN)
                         .param("approvedBy", "alice")
@@ -204,7 +203,6 @@ class LoginFlowIntegrationTest {
                 .andDo(org.springframework.test.web.servlet.result.MockMvcResultHandlers.print());
 
         // 10. 测试仅通过 Query 参数调用
-        System.out.println("--- Test 8: Query params only ---");
         mvc.perform(post("/api/app/qr/approve")
                         .param("ticket", "_pF8vJea3KAcBoLthGgcCohdzLXf594P.Se-qXDly9a0o9FNm-31YU-BZ_uW1ZQJDPQzRz6TmGGY")
                         .param("approvedBy", "alice"))

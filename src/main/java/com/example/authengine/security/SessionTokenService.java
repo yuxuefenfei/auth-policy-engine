@@ -47,5 +47,6 @@ public class SessionTokenService {
     }
 
     // 保留向后兼容类型别名
+    @SuppressWarnings("unused")
     public record SessionToken(String accessToken, String tokenType, long expiresIn) {}
 }

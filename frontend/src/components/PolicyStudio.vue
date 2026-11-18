@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getActivePolicy, listPolicyVersions, saveDraftPolicy, publishPolicy } from '../api';
-import type { PolicySnapshot, VersionInfo, PolicyNode } from '../types/auth';
+import { getActivePolicy, listPolicyVersions, saveDraftPolicy, publishPolicy } from '@/api';
+import type { PolicySnapshot, VersionInfo, PolicyNode } from '@/types/auth';
 
 const activePolicy = ref<PolicySnapshot | null>(null);
 const policyVersions = ref<VersionInfo[]>([]);
@@ -146,8 +146,7 @@ async function loadData() {
     if (!policyEditorText.value) {
       policyEditorText.value = JSON.stringify(active.root, null, 2);
     }
-    const versions = await listPolicyVersions();
-    policyVersions.value = versions;
+    policyVersions.value = await listPolicyVersions();
   } catch (err) {
     console.error('加载策略失败', err);
   }

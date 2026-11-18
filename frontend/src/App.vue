@@ -13,9 +13,7 @@ import {
   type PolicySnapshot,
   type SessionToken,
   type PolicyNode,
-  AttemptStatus,
   ATTEMPT_STATUS_META,
-  FactorType,
 } from './types/auth';
 import PolicyNodeViewer from './components/PolicyNodeViewer.vue';
 import FactorPassword from './components/FactorPassword.vue';
@@ -87,7 +85,7 @@ async function handleRefreshStatus() {
   if (!currentAttempt.value) return;
   loadingRefresh.value = true;
   try {
-    currentAttempt.value = await getAttempt(currentAttempt.value.attemptId);
+    currentAttempt.value = await getAttemptStatus(currentAttempt.value.attemptId);
   } catch (err) {
     console.error('刷新状态失败', err);
   } finally {
@@ -99,7 +97,7 @@ async function handleCompleteLogin() {
   if (!currentAttempt.value) return;
   loadingComplete.value = true;
   try {
-    const token = await completeAttempt(currentAttempt.value.attemptId);
+    const token = await completeLogin(currentAttempt.value.attemptId);
     completedSession.value = token;
     sessionUser.value = await getMe(token.accessToken);
   } catch (err: any) {
@@ -114,7 +112,7 @@ async function testReplayAttack() {
   loadingReplay.value = true;
   testResults.value.replay = '发起恶意重放请求中...';
   try {
-    await completeAttempt(currentAttempt.value.attemptId);
+    await completeLogin(currentAttempt.value.attemptId);
     testResults.value.replay = '异常: 重复核销成功 (未被 CAS 防线拦截)';
   } catch (err: any) {
     testResults.value.replay = `成功拦截防重放! HTTP ${err.status}: ${err.data?.error || err.message}`;

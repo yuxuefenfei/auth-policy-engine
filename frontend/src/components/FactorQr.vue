@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref, onUnmounted, nextTick } from 'vue';
-import { startFactor, getAttemptStatus, approveQrTicket } from '../api';
-import type { AttemptView } from '../types/auth';
-import type { StepProgress } from '../enums';
+import { startFactor, getAttemptStatus, approveQrTicket } from '@/api';
+import type { AttemptView } from '@/types/auth';
+import type { StepProgress } from '@/enums';
 
 const props = defineProps<{
   attempt: AttemptView;

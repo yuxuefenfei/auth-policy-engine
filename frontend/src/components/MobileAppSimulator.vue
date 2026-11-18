@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { approveQrTicket } from '../api';
-import type { AttemptView } from '../types/auth';
+import { approveQrTicket } from '@/api';
+import type { AttemptView } from '@/types/auth';
 
 const emit = defineEmits<{
   (e: 'approved', attempt: AttemptView): void;

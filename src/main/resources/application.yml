@@ -14,13 +14,13 @@ spring:
     init:
       mode: always
       schema-locations: classpath:schema.sql
-  mybatis-flex:
-    configuration:
-      log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
-      map-underscore-to-camel-case: true
   jackson:
     serialization:
       write-dates-as-timestamps: false
+mybatis-flex:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    map-underscore-to-camel-case: true
 app:
   auth:
     policy-code: WEB_LOGIN

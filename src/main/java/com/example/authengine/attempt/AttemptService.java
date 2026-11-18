@@ -343,11 +343,15 @@ public class AttemptService {
     }
 
     // 保留向后兼容类型别名 (方便现有测试调用)
+    @SuppressWarnings("unused")
     public record FactorOption(String nodeId, FactorType type) {}
+    @SuppressWarnings("unused")
     public record AttemptView(String attemptId, String policyCode, int policyVersion,
                               AttemptStatus status, Instant expiresAt,
                               List<FactorOption> available, Map<String, String> progress,
                               boolean canComplete) {}
+    @SuppressWarnings("unused")
     public record StartResult(AttemptResponse attempt, Instant challengeExpiresAt, String qrTicket) {}
+    @SuppressWarnings("unused")
     public record VerifyResult(AttemptResponse attempt, boolean verified) {}
 }

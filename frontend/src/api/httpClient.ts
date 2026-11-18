@@ -48,8 +48,11 @@ export async function request<T>(
     body: bodyPayload ? String(bodyPayload) : null,
   };
 
+  let res: Response;
+  let data: any = null;
+
   try {
-    const res = await fetch(path, {
+    res = await fetch(path, {
       method,
       headers,
       body: bodyPayload,
@@ -59,7 +62,6 @@ export async function request<T>(
 
     logEntry.status = res.status;
     const contentType = res.headers.get('content-type') || '';
-    let data: any = null;
 
     if (contentType.includes('application/json')) {
       data = await res.json();
@@ -70,24 +72,21 @@ export async function request<T>(
     logEntry.response = data;
     apiLogs.value.unshift(logEntry as ApiLogEntry);
     window.dispatchEvent(new CustomEvent('api-log', { detail: logEntry }));
-
-    if (!res.ok) {
-      const errorMsg =
-        typeof data === 'object' && data?.error
-          ? data.error
-          : `HTTP ${res.status} 请求失败`;
-      throw new ApiError(errorMsg, res.status, data);
-    }
-
-    return data as T;
   } catch (err: any) {
-    if (err instanceof ApiError) {
-      throw err;
-    }
     logEntry.status = 'ERROR';
     logEntry.response = err.message || '网络连接异常';
     apiLogs.value.unshift(logEntry as ApiLogEntry);
     window.dispatchEvent(new CustomEvent('api-log', { detail: logEntry }));
     throw new ApiError(err.message || '网络连接异常', 0, null);
   }
+
+  if (!res.ok) {
+    const errorMsg =
+      typeof data === 'object' && data?.error
+        ? data.error
+        : `HTTP ${res.status} 请求失败`;
+    throw new ApiError(errorMsg, res.status, data);
+  }
+
+  return data as T;
 }

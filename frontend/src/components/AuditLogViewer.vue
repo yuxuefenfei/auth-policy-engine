@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { apiLogs } from '../api/auth';
+import { apiLogs } from '@/api';
 
 const filterMethod = ref('ALL');
 

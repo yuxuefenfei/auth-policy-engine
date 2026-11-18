@@ -1,9 +1,6 @@
-import type { FactorType } from '../enums/factorType';
-import type { PolicyOp } from '../enums/policyOp';
-import type { AttemptStatus } from '../enums/attemptStatus';
-import type { StepProgress } from '../enums/stepProgress';
+import type { FactorType, PolicyOp, AttemptStatus, StepProgress } from '@/enums';
 
-export * from '../enums';
+export * from '@/enums';
 
 export interface PolicyNode {
   op: PolicyOp;

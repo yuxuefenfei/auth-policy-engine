@@ -34,6 +34,7 @@ public final class SecureValues {
         }
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     public static boolean constantEquals(String a, String b) {
         return a != null && b != null && MessageDigest.isEqual(
                 a.getBytes(StandardCharsets.US_ASCII), b.getBytes(StandardCharsets.US_ASCII));

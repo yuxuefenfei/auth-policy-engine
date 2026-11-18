@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { verifyFactor } from '../api';
-import type { AttemptView, StepProgress } from '../types/auth';
+import { verifyFactor } from '@/api';
+import type { AttemptView, StepProgress } from '@/types/auth';
 
 const props = defineProps<{
   attempt: AttemptView;

@@ -5,6 +5,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -21,8 +22,8 @@ public class BearerSessionFilter extends OncePerRequestFilter {
     private final UserDetailsService users;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest req, HttpServletResponse resp,
-                                    FilterChain chain) throws ServletException, IOException {
+    protected void doFilterInternal(@NonNull HttpServletRequest req, @NonNull HttpServletResponse resp,
+                                    @NonNull FilterChain chain) throws ServletException, IOException {
         String path = req.getServletPath();
         if (!path.startsWith("/api/admin/") && !path.startsWith("/api/app/")) {
             String authorization = req.getHeader("Authorization");

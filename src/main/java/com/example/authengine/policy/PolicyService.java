@@ -220,9 +220,11 @@ public class PolicyService {
     }
 
     // 保留向后兼容内部类型定义 (便于老测试或内部类直接引用)
+    @SuppressWarnings("unused")
     public record PolicySnapshot(String code, int version, PolicyNode root) {
     }
 
+    @SuppressWarnings("unused")
     public record VersionInfo(int version, String status, String checksum, Instant publishedAt) {
     }
 }
